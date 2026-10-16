@@ -1,0 +1,11 @@
+# Signs the player can choose from. One word per line, spelled exactly as the
+# recognizer's "popsign" gallery spells it. Lines starting with # are ignored.
+# Replace this with the full list when you have it.
+yellow
+red
+owl
+dad
+elephant
+duck
+clown
+loud
