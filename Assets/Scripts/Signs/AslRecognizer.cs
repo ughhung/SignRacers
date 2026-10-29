@@ -59,9 +59,9 @@ namespace SignRacers.Signs
         [SerializeField] private bool enableOverlay = true;
         [SerializeField] private bool drawPose = true;
 
-        [Header("Vocabulary")]
-        [Tooltip("Signs recognition is limited to. Overwritten at runtime by SetVocabulary().")]
-        [SerializeField] private string[] signs = { "yellow", "red", "owl", "dad", "elephant" };
+        // The signs recognition is limited to. Not shown in the Inspector: this starting list is only used
+        // until the game calls SetVocabulary() with the player's picked words.
+        [System.NonSerialized] private string[] signs = { "yellow", "red", "owl", "dad", "elephant" };
 
         // The pipeline and its texture live for the whole app, not for one scene.
         // Closing and reopening the pipeline (or rebinding a fresh texture) is not a cycle

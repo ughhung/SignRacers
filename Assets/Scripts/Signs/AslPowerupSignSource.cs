@@ -116,7 +116,9 @@ namespace SignRacers.Signs
 
             // Tell the race this player's camera is up. With no recognizer in the scene
             // (debug keys only) there is nothing to wait for.
-            if (!kart.IsSignReady && (recognizer == null || recognizer.IsReady)) kart.MarkSignReady();
+            var raceManager = RaceManager.Instance;
+            bool trackReady = raceManager == null || raceManager.TrackReady;
+            kart.SetSignReady(trackReady && (recognizer == null || recognizer.IsReady));
 
             // A room finished voting: switch to the winning words.
             if (appliedSignsVersion != GameSession.SignsVersion && GameSession.HasSelection)

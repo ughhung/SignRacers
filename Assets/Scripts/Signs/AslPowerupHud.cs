@@ -20,6 +20,12 @@ namespace SignRacers.Signs
         [Tooltip("How far down the screen the word, its timer bar and the CORRECT / WRONG flash sit. 0 is the top, 1 is the bottom. You can drag this while the game is running to find the spot you like.")]
         [SerializeField, Range(0.05f, 0.75f)] private float wordPosition = 0.40f;
 
+        [Tooltip("Draw the old placeholder buttons. Leave off: the real buttons now live in the Race HUD prefab (RaceHudView).")]
+        [SerializeField] private bool drawButtons = false;
+
+        [Tooltip("Draw the old placeholder word, timer bar and CORRECT / WRONG flash. Leave off: the Race HUD prefab (SignViewHud) shows them now.")]
+        [SerializeField] private bool drawSigningText = false;
+
         private GUIStyle big, small, button;
         private Vector2Int builtFor;
 
@@ -51,7 +57,7 @@ namespace SignRacers.Signs
             // }
 
             // The word to sign, with a shrinking countdown bar.
-            if (p.IsSigning)
+            if (drawSigningText && p.IsSigning)
             {
                 float wordY = s.y + s.height * wordPosition;
                 GUI.Label(new Rect(s.x, wordY, s.width, 0.16f * u), p.Word.ToUpperInvariant(), big);
@@ -70,7 +76,7 @@ namespace SignRacers.Signs
             }
 
             // Result flash.
-            if (sinceResult < ResultFlashSeconds && p.LastResult != PromptResult.None)
+            if (drawSigningText && sinceResult < ResultFlashSeconds && p.LastResult != PromptResult.None)
             {
                 bool ok = p.LastResult == PromptResult.Correct;
                 GUI.color = ok ? Color.green : new Color(1f, 0.5f, 0.2f);
@@ -84,26 +90,29 @@ namespace SignRacers.Signs
             float bw = (s.width - pad * 4f) / 3f;
             float bx = s.x + pad;
 
-            bool boostActive = p.IsSigning && p.PendingAction == PowerupAction.Boost;
-            string boostLabel = boostActive ? "CHECK NOW"
-                              : p.BoostCooldownLeft > 0.05f ? $"BOOST\n{p.BoostCooldownLeft:F1}s"
-                              : "BOOST";
-            if (DrawButton(new Rect(bx, by, bw, bh), boostLabel, boostActive || p.CanStartBoost, boostActive))
+            if (drawButtons)
             {
-                if (boostActive) p.CheckNow(); else p.StartBoost();
-            }
-
-            for (int slot = 0; slot < 2; slot++)
-            {
-                bool active = p.IsSigning && p.PendingAction == PowerupAction.Item && p.PendingSlot == slot;
-                ItemType item = kart.GetItem(slot);
-                string label = active ? "CHECK NOW"
-                             : item == ItemType.None ? "EMPTY"
-                             : item.ToString();
-                var rect = new Rect(bx + (bw + pad) * (slot + 1), by, bw, bh);
-                if (DrawButton(rect, label, active || p.CanStartItem(slot), active))
+                bool boostActive = p.IsSigning && p.PendingAction == PowerupAction.Boost;
+                string boostLabel = boostActive ? "CHECK NOW"
+                                  : p.BoostCooldownLeft > 0.05f ? $"BOOST\n{p.BoostCooldownLeft:F1}s"
+                                  : "BOOST";
+                if (DrawButton(new Rect(bx, by, bw, bh), boostLabel, boostActive || p.CanStartBoost, boostActive))
                 {
-                    if (active) p.CheckNow(); else p.StartItem(slot);
+                    if (boostActive) p.CheckNow(); else p.StartBoost();
+                }
+
+                for (int slot = 0; slot < 2; slot++)
+                {
+                    bool active = p.IsSigning && p.PendingAction == PowerupAction.Item && p.PendingSlot == slot;
+                    ItemType item = kart.GetItem(slot);
+                    string label = active ? "CHECK NOW"
+                                 : item == ItemType.None ? "EMPTY"
+                                 : item.ToString();
+                    var rect = new Rect(bx + (bw + pad) * (slot + 1), by, bw, bh);
+                    if (DrawButton(rect, label, active || p.CanStartItem(slot), active))
+                    {
+                        if (active) p.CheckNow(); else p.StartItem(slot);
+                    }
                 }
             }
 

@@ -65,8 +65,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 221e6ee9e22bd4bcfadf6a3d2f6fc5f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SignRacers.Race.RaceManager
-  totalLaps: 3
+  totalLaps: 1
   playersNeeded: 1
-  countdownSeconds: 10
+  countdownSeconds: 5
   cameraWaitTimeout: 20
+  votingEnabled: 1
+  votingSeconds: 45
+  reviewSeconds: 60
   _RaceTime: 0
+  _FinalWordCount: 0

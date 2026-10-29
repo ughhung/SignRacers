@@ -19,7 +19,7 @@ namespace SignRacers.UI
     {
         [Header("Scenes")]
         [Tooltip("Exact name of your race scene. It must be in the Build Profiles scene list.")]
-        [SerializeField] private string raceSceneName = "Race";
+        [SerializeField] private string raceSceneName = "Game";
 
         [Header("Panels")]
         [SerializeField] private GameObject homePanel;

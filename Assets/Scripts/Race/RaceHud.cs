@@ -15,11 +15,18 @@ namespace SignRacers.Race
     {
         private const float GoFlashSeconds = 0.8f;
 
+        [Tooltip("Draw the old placeholder lap / position / clock bar. Leave off: the Race HUD prefab (RaceHudView) shows lap and position now.")]
+        [SerializeField] private bool drawTopBar = false;
+
+        [Tooltip("Draw this whole old placeholder HUD (countdown, messages, results). Leave off: RaceMessagesHud and ResultsHud replace it.")]
+        [SerializeField] private bool drawLegacy = false;
+
         private GUIStyle huge, big, medium, small, row, button, left, right;
         private Vector2Int builtFor;
 
         private void OnGUI()
         {
+            if (!drawLegacy) return;
             var race = RaceManager.Instance;
             if (race == null) return;
 
@@ -37,7 +44,7 @@ namespace SignRacers.Race
             RaceState state = race.State;
 
             // Top bar: lap on the left, position in the middle, clock on the right.
-            if ((state == RaceState.Racing || state == RaceState.Finished) && me != null)
+            if (drawTopBar && (state == RaceState.Racing || state == RaceState.Finished) && me != null)
             {
                 int place = standings.IndexOf(me) + 1;
                 float y = s.y + 0.02f * u;

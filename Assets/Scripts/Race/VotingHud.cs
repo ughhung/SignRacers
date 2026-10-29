@@ -16,6 +16,9 @@ namespace SignRacers.Race
     /// </summary>
     public class VotingHud : MonoBehaviour
     {
+        [Tooltip("The old IMGUI voting and review screens. Off now that they are a UI prefab (VotingCanvas).")]
+        [SerializeField] private bool drawLegacy = false;
+
         private const float PracticeSeconds = 3f;
 
         private GUIStyle title, medium, small, note, row, wordLabel, count, button;
@@ -36,6 +39,7 @@ namespace SignRacers.Race
 
         private void Update()
         {
+            if (!drawLegacy) return;
             var race = RaceManager.Instance;
             if (race == null) return;
 
@@ -62,6 +66,7 @@ namespace SignRacers.Race
 
         private void OnGUI()
         {
+            if (!drawLegacy) return;
             var race = RaceManager.Instance;
             if (race == null) return;
 
@@ -74,7 +79,7 @@ namespace SignRacers.Race
             Rect s = HudLayout.Safe;
             float pad = 0.04f * u;
 
-            GUI.color = new Color(0.05f, 0.06f, 0.12f, 0.95f);
+            GUI.color = new Color(0.05f, 0.06f, 0.12f, 1f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 

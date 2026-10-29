@@ -13,12 +13,16 @@ namespace SignRacers.Race
     /// </summary>
     public class LobbyHud : MonoBehaviour
     {
+        [Tooltip("The old IMGUI lobby. Off now that the lobby is a UI prefab.")]
+        [SerializeField] private bool drawLegacy = false;
+
         private GUIStyle code, medium, small, row, button;
         private Vector2Int builtFor;
         private float copiedAt = -100f;
 
         private void OnGUI()
         {
+            if (!drawLegacy) return;
             var race = RaceManager.Instance;
             if (race == null || race.State != RaceState.Lobby) return;
 
@@ -29,7 +33,7 @@ namespace SignRacers.Race
             float pad = 0.04f * u;
 
             // Backdrop over the whole screen.
-            GUI.color = new Color(0.05f, 0.06f, 0.12f, 0.93f);
+            GUI.color = new Color(0.05f, 0.06f, 0.12f, 1f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 

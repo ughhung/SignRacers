@@ -39,6 +39,8 @@ namespace SignRacers.Race
 
         public override void Spawned()
         {
+            var kart = GetComponent<SignRacers.Kart.KartPathFollower>();
+            if (kart != null && kart.IsBot) return; // bots do not vote, and nobody waits for them
             All.Add(this);
             if (HasStateAuthority) Local = this;
         }

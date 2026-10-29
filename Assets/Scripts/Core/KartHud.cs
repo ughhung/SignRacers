@@ -15,8 +15,12 @@ namespace SignRacers.Core
         private GUIStyle style;
         private Vector2Int builtFor;
 
+        [Tooltip("Draw the old placeholder effects line. Leave off: EffectsHud on the Race HUD prefab replaces it.")]
+        [SerializeField] private bool drawLegacy = false;
+
         private void OnGUI()
         {
+            if (!drawLegacy) return;
             KartPathFollower kart = null;
             foreach (var k in KartPathFollower.All)
             {
