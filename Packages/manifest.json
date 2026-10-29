@@ -50,5 +50,14 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
-  }
+  },
+  "scopedRegistries": [
+    {
+      "name": "SLRGTK",
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk",
+      "scopes": [
+        "edu.gatech.ccg"
+      ]
+    }
+  ]
 }

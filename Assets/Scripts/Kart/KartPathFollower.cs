@@ -60,7 +60,16 @@ namespace SignRacers.Kart
         [Networked] public int ItemCount { get; set; }
         [Networked, Capacity(2)] private NetworkArray<int> Slots => default;
 
-        private TrackPath track;
+        private TrackPath trackCache;
+        /// <summary>The loaded track. Looked up again whenever the track scene has been swapped.</summary>
+        private TrackPath track
+        {
+            get
+            {
+                if (trackCache == null) trackCache = FindFirstObjectByType<TrackPath>();
+                return trackCache;
+            }
+        }
 
         // Drawing position, smoothed between simulation ticks so motion is fluid at any frame rate.
         private float visualDistance;
@@ -73,12 +82,39 @@ namespace SignRacers.Kart
 
         public bool IsBot => isBot;
 
+        /// <summary>Name shown in the results for a bot ("Bot 1"). Set when the bot is created.</summary>
+        public string BotName { get; set; } = "Bot";
+
+        /// <summary>Multiplies this kart's speed. 1 normally. A bot's driver changes it to catch up or ease off. Only used by the owner.</summary>
+        public float SpeedScale { get; set; } = 1f;
+
+        /// <summary>A bot takes a boost, as if it had signed a word correctly.</summary>
+        public void BotBoost()
+        {
+            if (HasStateAuthority) HandleBoost();
+        }
+
+        /// <summary>A bot uses its oldest item, if it has one.</summary>
+        public void BotUseItem()
+        {
+            if (HasStateAuthority && ItemCount > 0) HandleItemUse(0);
+        }
+
         /// <summary>Which way the track points at the kart's position (unaffected by spin-outs). Used by the chase camera.</summary>
         public Vector3 TrackForward { get; private set; } = Vector3.forward;
-        public bool IsFinished => Finished;
+        /// <summary>False before this kart has spawned and after it has been removed (for example after leaving a room). Networked values can only be read while true.</summary>
+        private bool Live => Object != null && Object.IsValid;
+
+        public bool IsFinished => Live && Finished;
 
         /// <summary>Has this player's camera come up? Bots have no camera, so they always count as ready.</summary>
-        public bool IsSignReady => SignReady || isBot;
+        public bool IsSignReady => isBot || (Live && SignReady);
+
+        /// <summary>Called by the kart's owner: true once its camera and the room's track are both ready.</summary>
+        public void SetSignReady(bool ready)
+        {
+            if (HasStateAuthority && SignReady != ready) SignReady = ready;
+        }
 
         /// <summary>Called by the kart's owner once its camera is ready.</summary>
         public void MarkSignReady()
@@ -88,7 +124,7 @@ namespace SignRacers.Kart
 
         /// <summary>Whole laps completed so far.</summary>
         public int LapsCompleted =>
-            track != null && track.IsValid ? Mathf.FloorToInt(Distance / track.TotalLength) : 0;
+            Live && track != null && track.IsValid ? Mathf.FloorToInt(Distance / track.TotalLength) : 0;
 
         /// <summary>The lap to show on the HUD (1-based, capped at the race length).</summary>
         public int CurrentLap
@@ -103,13 +139,13 @@ namespace SignRacers.Kart
 
         /// <summary>Set before spawning (see GameBootstrap) so karts drive side by side instead of overlapping.</summary>
         public void SetLaneOffset(float offset) => LaneOffset = offset;
-        public bool IsBoosted => IsActive(BoostTimer);
-        public bool IsSuperBoosted => IsActive(SuperBoostTimer);
-        public bool IsPenalized => IsActive(PenaltyTimer);
-        public bool IsSlowed => IsActive(SlowedTimer);
+        public bool IsBoosted => Live && IsActive(BoostTimer);
+        public bool IsSuperBoosted => Live && IsActive(SuperBoostTimer);
+        public bool IsPenalized => Live && IsActive(PenaltyTimer);
+        public bool IsSlowed => Live && IsActive(SlowedTimer);
 
         public ItemType GetItem(int slot) =>
-            slot >= 0 && slot < ItemCount ? (ItemType)Slots[slot] : ItemType.None;
+            Live && slot >= 0 && slot < ItemCount ? (ItemType)Slots[slot] : ItemType.None;
 
         private bool IsActive(TickTimer timer) =>
             Object != null && Object.IsValid && Runner != null && !timer.ExpiredOrNotRunning(Runner);
@@ -121,8 +157,6 @@ namespace SignRacers.Kart
         {
             All.Add(this);
 
-            track = FindFirstObjectByType<TrackPath>();
-            if (track == null) Debug.LogError("[Kart] No TrackPath found in the scene.", this);
 
             if (HasStateAuthority)
             {
@@ -199,6 +233,13 @@ namespace SignRacers.Kart
             return true;
         }
 
+        /// <summary>Testing cheat (see DebugCheats): start a super boost right now, no item or signing needed.</summary>
+        public void DebugSuperBoost()
+        {
+            if (!HasStateAuthority) return;
+            SuperBoostTimer = TickTimer.CreateFromSeconds(Runner, superBoostDuration);
+        }
+
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void RPC_ApplySlow()
         {
@@ -229,7 +270,7 @@ namespace SignRacers.Kart
             if (Finished) return;                    // parked on the finish line
             if (!RaceManager.AllowsDriving) return;  // locked during waiting / countdown
 
-            float speed = baseSpeed;
+            float speed = baseSpeed * SpeedScale;
             if (!BoostTimer.ExpiredOrNotRunning(Runner)) speed *= boostMultiplier;
             if (!SuperBoostTimer.ExpiredOrNotRunning(Runner)) speed *= superBoostMultiplier;
             if (!PenaltyTimer.ExpiredOrNotRunning(Runner)) speed *= penaltyMultiplier;

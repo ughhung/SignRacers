@@ -1,5 +1,6 @@
 using Fusion;
 using SignRacers.Kart;
+using SignRacers.Track;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -34,7 +35,12 @@ namespace SignRacers.Core
         [FormerlySerializedAs("dummyKartPrefab")]
         [Tooltip("Optional. A kart prefab with Is Bot ticked. Spawned beside you in Single mode only.")]
         [SerializeField] private NetworkPrefabRef botKartPrefab;
-        [SerializeField, Range(0, 3)] private int botCount = 1;
+        [SerializeField, Range(0, 3)] private int botCount = 3;
+        [Tooltip("Each bot's speed is a random number between these two. Around 1 is even with a player who never signs; lower is easier.")]
+        [SerializeField] private Vector2 botSkillRange = new Vector2(0.92f, 1.05f);
+
+        /// <summary>True from the moment the player leaves a race until the menu loads (the loading cover says "Leaving").</summary>
+        public static bool IsLeaving { get; private set; }
 
         private NetworkRunner runner;
         private bool raceManagerSpawned;
@@ -42,11 +48,20 @@ namespace SignRacers.Core
 
         private async void Start()
         {
+            IsLeaving = false;
             bool fromMenu = GameSession.StartedFromMenu;
             bool onlineFromMenu = fromMenu && GameSession.Mode == SessionMode.Multiplayer;
 
             // When launched from the menu, the menu's choice wins over the inspector.
             if (fromMenu) gameMode = onlineFromMenu ? GameMode.Shared : GameMode.Single;
+
+            // Load the track first, so every kart that appears finds its track ready.
+            if (!await TrackLoader.Load(TrackCatalog.SceneName(0)))
+            {
+                GameSession.LastError = "The track could not be loaded.";
+                ReturnToMenu();
+                return;
+            }
 
             runner = gameObject.AddComponent<NetworkRunner>();
             runner.ProvideInput = false; // karts auto-steer, so there's no player input to send
@@ -88,6 +103,7 @@ namespace SignRacers.Core
         {
             if (leaving) return;
             leaving = true;
+            IsLeaving = true;
 
             try
             {
@@ -154,8 +170,15 @@ namespace SignRacers.Core
                 for (int i = 0; i < count; i++)
                 {
                     float botLane = BotLanes[i];
+                    string botName = "Bot " + (i + 1);
+                    float botSkill = Random.Range(botSkillRange.x, botSkillRange.y);
                     Runner.Spawn(botKartPrefab, Vector3.zero, Quaternion.identity, null,
-                        (r, obj) => obj.GetComponent<KartPathFollower>().SetLaneOffset(botLane));
+                        (r, obj) =>
+                        {
+                            obj.GetComponent<KartPathFollower>().SetLaneOffset(botLane);
+                            var driver = obj.gameObject.AddComponent<BotDriver>();
+                            driver.Setup(botSkill, botName);
+                        });
                 }
                 Debug.Log($"[Bootstrap] Spawned {count} bot/dummy kart(s).");
             }

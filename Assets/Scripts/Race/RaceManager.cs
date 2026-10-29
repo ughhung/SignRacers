@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
 using Fusion;
 using SignRacers.Core;
 using SignRacers.Kart;
+using SignRacers.Track;
 using UnityEngine;
 
 namespace SignRacers.Race
@@ -38,6 +40,8 @@ namespace SignRacers.Race
         [SerializeField] private bool votingEnabled = true;
         [SerializeField] private float votingSeconds = 45f;
         [SerializeField] private float reviewSeconds = 60f;
+        [Tooltip("Solo: show the practice screen (try each of your signs on the camera) before the race.")]
+        [SerializeField] private bool soloPractice = true;
 
         private float cameraWait;
         private int requiredKarts; // set when the host starts from the lobby
@@ -49,8 +53,45 @@ namespace SignRacers.Race
         [Networked, Capacity(5)] private NetworkArray<int> FinalWords => default;
         [Networked] public int FinalWordCount { get; set; }
 
+        /// <summary>Which track the room races on (a position in TrackCatalog). The host picks it in the lobby.</summary>
+        [Networked] public int TrackId { get; set; }
+
+        private bool trackLoading;
+        private string trackFailed;
+
+        /// <summary>True once this device has the room's chosen track loaded.</summary>
+        public bool TrackReady => !trackLoading && TrackLoader.LoadedName == TrackCatalog.SceneName(TrackId);
+
+        /// <summary>Host only, lobby only: step to the next (+1) or previous (-1) track.</summary>
+        public void ChangeTrack(int step)
+        {
+            if (!HasStateAuthority || State != RaceState.Lobby) return;
+            TrackId = TrackCatalog.Wrap(TrackId + step);
+        }
+
+        private void Update()
+        {
+            if (Object == null || !Object.IsValid || trackLoading) return;
+            string wanted = TrackCatalog.SceneName(TrackId);
+            if (TrackLoader.LoadedName == wanted || trackFailed == wanted) return;
+            _ = SwitchTrack(wanted);
+        }
+
+        private async Task SwitchTrack(string sceneName)
+        {
+            trackLoading = true;
+            try { trackFailed = await TrackLoader.Load(sceneName) ? null : sceneName; }
+            finally { trackLoading = false; }
+        }
+
         public RaceState State => (RaceState)StateValue;
-        public int TotalLaps => totalLaps;
+
+        /// <summary>Offline race (Solo): one human, no room code, no waiting for other players.</summary>
+        public bool IsSolo => Runner != null && Runner.GameMode == GameMode.Single;
+
+        /// <summary>False in Solo, where choosing signs has no time limit.</summary>
+        public bool HasPhaseTimer => PhaseTimer.IsRunning;
+        public int TotalLaps => TrackInfo.Current != null && TrackInfo.Current.Laps > 0 ? TrackInfo.Current.Laps : totalLaps;
         public int PlayersNeeded => requiredKarts > 0 ? requiredKarts : playersNeeded;
         public int KartsPresent => KartPathFollower.All.Count;
         public int ReadyKarts => KartPathFollower.All.Count(k => k.IsSignReady);
@@ -88,7 +129,11 @@ namespace SignRacers.Race
 
             // An online room starts in the lobby. Everything else goes straight to
             // waiting for cameras. (Only the owner sets state, others just receive it.)
-            if (HasStateAuthority && GameSession.StartedFromMenu && GameSession.Mode == SessionMode.Multiplayer)
+            // An online room starts in the lobby. Solo picks its signs on the menu, then gets the practice
+            // screen (the lobby is skipped). Played directly in the editor: straight to waiting.
+            // (Only the owner sets state, others just receive it.)
+            if (HasStateAuthority && GameSession.StartedFromMenu &&
+                (GameSession.Mode == SessionMode.Multiplayer || soloPractice))
                 StateValue = (int)RaceState.Lobby;
         }
 
@@ -98,17 +143,46 @@ namespace SignRacers.Race
             if (!HasStateAuthority || State != RaceState.Lobby) return;
 
             requiredKarts = KartsPresent; // everyone who is here now
-            if (Runner.SessionInfo.IsValid) Runner.SessionInfo.IsOpen = false; // nobody joins mid-race
+            if (!IsSolo && Runner.SessionInfo.IsValid) Runner.SessionInfo.IsOpen = false; // nobody joins mid-race
 
             if (votingEnabled)
             {
-                PhaseTimer = TickTimer.CreateFromSeconds(Runner, votingSeconds);
+                PhaseTimer = IsSolo ? default : TickTimer.CreateFromSeconds(Runner, votingSeconds); // Solo: no time limit
                 StateValue = (int)RaceState.Voting;
             }
             else
             {
                 StateValue = (int)RaceState.Waiting;
             }
+        }
+
+        /// <summary>Solo: the signs were picked on the menu, so go straight to the practice screen with them.</summary>
+        private void StartSoloPractice()
+        {
+            var library = SignLibrary.Load();
+            var chosen = GameSession.SelectedSigns;
+            int count = 0;
+            if (chosen != null)
+            {
+                foreach (string word in chosen)
+                {
+                    int index = library.FindIndex(w => string.Equals(w, word, System.StringComparison.OrdinalIgnoreCase));
+                    if (index < 0 || count >= PlayerVote.MaxChoices) continue;
+                    FinalWords.Set(count++, index);
+                }
+            }
+
+            if (count == 0) // nothing to practise
+            {
+                cameraWait = 0f;
+                StateValue = (int)RaceState.Waiting;
+                return;
+            }
+
+            requiredKarts = KartsPresent;
+            FinalWordCount = count;
+            PhaseTimer = default; // no time limit in Solo
+            StateValue = (int)RaceState.Review;
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
@@ -122,6 +196,11 @@ namespace SignRacers.Race
 
             switch (State)
             {
+                case RaceState.Lobby:
+                    // Solo skips the lobby screen: go on to the practice screen once the player's kart exists.
+                    if (IsSolo && PlayerVote.All.Count > 0) StartSoloPractice();
+                    break;
+
                 case RaceState.Waiting:
                     if (KartsPresent < PlayersNeeded)
                     {
@@ -181,7 +260,7 @@ namespace SignRacers.Race
                 FinalWords.Set(i, i < winners.Count ? winners[i] : 0);
             FinalWordCount = winners.Count;
 
-            PhaseTimer = TickTimer.CreateFromSeconds(Runner, reviewSeconds);
+            PhaseTimer = IsSolo ? default : TickTimer.CreateFromSeconds(Runner, reviewSeconds);
             StateValue = (int)RaceState.Review;
         }
 

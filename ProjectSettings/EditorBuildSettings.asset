@@ -15,8 +15,14 @@ EditorBuildSettings:
     path: Assets/Photon/FusionDemos/Fusion-Intro-Shared/Scenes/FusionIntroShared.unity
     guid: 0c93e24ebcb1fed489eeaf2f36cfb925
   - enabled: 1
-    path: Assets/Scenes/Race.unity
+    path: Assets/Scenes/Game.unity
+    guid: 5308a41c05b944699b311cf86adaaac0
+  - enabled: 1
+    path: Assets/Scenes/Track_Hand.unity
     guid: 93288fd3a42d34153af42b8a5bc31d77
+  - enabled: 1
+    path: Assets/Scenes/Track_Loop.unity
+    guid: 4bda214b2084e4ddba19b2d515c5f433
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
