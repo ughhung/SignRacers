@@ -16,14 +16,21 @@ namespace SignRacers.EditorTools
     {
         private const string PrefabPath = "Assets/Prefabs/UI/VotingCanvas.prefab";
         private static readonly Color Dim = new Color(1f, 1f, 1f, 0.65f);
-        private static readonly Color Slate = new Color(0.30f, 0.34f, 0.46f);
-        private static readonly Color Blue = new Color(0.25f, 0.55f, 0.95f);
+        private static readonly Color Slate = new Color(0.38f, 0.38f, 0.38f);
+        private static readonly Color Blue = new Color(0.55f, 0.55f, 0.55f);
 
         [MenuItem("Sign Racers/Build Voting And Review Prefab")]
         public static void Build()
         {
+            if (EditorSceneManager.GetActiveScene().name != "Game"
+                && !EditorUtility.DisplayDialog("Open the Game scene first",
+                    "The open scene is '" + EditorSceneManager.GetActiveScene().name + "', not 'Game'. The screen would be put in that scene, " +
+                    "and it would disappear whenever the track scene is swapped. Cancel, open the Game scene, and run this again.",
+                    "Build anyway", "Cancel"))
+                return;
+
             RaceHudBuilder.EnsureFolder("Assets/Prefabs/UI");
-            Sprite panel = RaceHudBuilder.GetPanelSprite();
+            Sprite panel = null; // flat greybox: no rounded corners
 
             var root = new GameObject("VotingCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
                                       typeof(GraphicRaycaster), typeof(CanvasGroup));
@@ -39,7 +46,7 @@ namespace SignRacers.EditorTools
 
             var background = RaceHudBuilder.MakeRect("Background", root.transform);
             RaceHudBuilder.Stretch(background);
-            background.gameObject.AddComponent<Image>().color = new Color(0.05f, 0.06f, 0.12f, 1f);
+            background.gameObject.AddComponent<Image>().color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             var safe = RaceHudBuilder.MakeRect("SafeArea", root.transform);
             RaceHudBuilder.Stretch(safe);
@@ -82,7 +89,7 @@ namespace SignRacers.EditorTools
             // One row to copy for every word (kept inactive).
             var rowTemplate = RaceHudBuilder.MakeRect("WordRow", content);
             var rowImage = rowTemplate.gameObject.AddComponent<Image>();
-            rowImage.sprite = panel; rowImage.type = Image.Type.Sliced; rowImage.color = new Color(0.20f, 0.24f, 0.37f, 1f);
+            rowImage.sprite = panel; rowImage.type = Image.Type.Simple; rowImage.color = new Color(0.30f, 0.30f, 0.30f, 1f);
             var rowButton = rowTemplate.gameObject.AddComponent<Button>();
             rowButton.targetGraphic = rowImage;
             rowTemplate.gameObject.AddComponent<LayoutElement>().preferredHeight = 110;
@@ -116,7 +123,7 @@ namespace SignRacers.EditorTools
                 var row = RaceHudBuilder.MakeRect("Row" + (i + 1), review);
                 RaceHudBuilder.PinTop(row, -250 - i * 190, 960, 170);
                 var img = row.gameObject.AddComponent<Image>();
-                img.sprite = panel; img.type = Image.Type.Sliced; img.color = new Color(1f, 1f, 1f, 0.08f);
+                img.sprite = panel; img.type = Image.Type.Simple; img.color = new Color(1f, 1f, 1f, 0.08f);
                 rows[i] = row.gameObject;
 
                 var word = RaceHudBuilder.MakeText("Word", row, "Word", 62, TextAlignmentOptions.Left, Color.white);
@@ -141,7 +148,7 @@ namespace SignRacers.EditorTools
             RaceHudBuilder.PinTop(practice.rectTransform, -1230, 960, 130);
             var reviewStatus = RaceHudBuilder.MakeText("StatusText", review, "", 36, TextAlignmentOptions.Center, Dim);
             BottomText(reviewStatus, 195);
-            var readyButton = MakeBottomButton("ReadyButton", review, panel, new Color(0.25f, 0.65f, 0.35f), "READY");
+            var readyButton = MakeBottomButton("ReadyButton", review, panel, new Color(0.55f, 0.55f, 0.55f), "READY");
 
             // ---------- wire it up ----------
             var view = root.AddComponent<VotingView>();

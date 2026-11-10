@@ -195,7 +195,13 @@ namespace SignRacers.Signs
             LastResult = correct ? PromptResult.Correct : PromptResult.Wrong;
             LastResultTime = Time.time;
 
-            if (!correct) { RaisePenalty(); return; }
+            if (!correct)
+            {
+                // A wrong sign on an item attempt costs the item as well as the usual penalty.
+                if (action != PowerupAction.Boost) kart.DiscardItem(slot);
+                RaisePenalty();
+                return;
+            }
 
             if (action == PowerupAction.Boost) RaiseBoost();
             else RaiseItemUse(slot);

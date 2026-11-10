@@ -190,19 +190,35 @@ namespace SignRacers.Kart
 
         private void HandleItemUse(int slot)
         {
+            if (!TakeItem(slot, out ItemType item)) return;
+            ApplyItem(item);
+        }
+
+        /// <summary>
+        /// Throws away the item in a slot with no effect. Used when the player signs an
+        /// item's word wrong: the item is lost. Only the state authority may call this.
+        /// </summary>
+        public void DiscardItem(int slot)
+        {
+            if (!Live || !HasStateAuthority) return;
+            if (TakeItem(slot, out ItemType item)) Debug.Log($"[Kart] Lost item after a wrong sign: {item}");
+        }
+
+        /// <summary>Removes the item from a slot and shifts the later ones down.</summary>
+        private bool TakeItem(int slot, out ItemType item)
+        {
+            item = ItemType.None;
             if (slot < 0 || slot >= ItemCount)
             {
                 Debug.Log($"[Kart] Item slot {slot} is empty, nothing to use.");
-                return;
+                return false;
             }
 
-            // Take the item from that slot and shift the later ones down.
-            ItemType item = (ItemType)Slots[slot];
+            item = (ItemType)Slots[slot];
             for (int i = slot; i < MaxItems - 1; i++) Slots.Set(i, Slots[i + 1]);
             Slots.Set(MaxItems - 1, 0);
             ItemCount--;
-
-            ApplyItem(item);
+            return true;
         }
 
         private void ApplyItem(ItemType item)

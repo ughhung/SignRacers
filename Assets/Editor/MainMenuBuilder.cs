@@ -20,11 +20,11 @@ namespace SignRacers.EditorTools
     /// </summary>
     public static class MainMenuBuilder
     {
-        private static readonly Color Background = new Color(0.08f, 0.10f, 0.18f);
-        private static readonly Color PrimaryButton = new Color(0.25f, 0.55f, 0.95f);
-        private static readonly Color SecondaryButton = new Color(0.30f, 0.34f, 0.46f);
-        private static readonly Color WordNormal = new Color(0.20f, 0.24f, 0.36f);
-        private static readonly Color WordSelected = new Color(0.25f, 0.70f, 0.40f);
+        private static readonly Color Background = new Color(0.15f, 0.15f, 0.15f);
+        private static readonly Color PrimaryButton = new Color(0.55f, 0.55f, 0.55f);
+        private static readonly Color SecondaryButton = new Color(0.38f, 0.38f, 0.38f);
+        private static readonly Color WordNormal = new Color(0.30f, 0.30f, 0.30f);
+        private static readonly Color WordSelected = new Color(0.55f, 0.55f, 0.55f);
         private static readonly Color FieldColor = new Color(1f, 1f, 1f, 0.12f);
         private static readonly Color ErrorColor = new Color(1f, 0.45f, 0.40f);
 

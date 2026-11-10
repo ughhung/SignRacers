@@ -42,7 +42,7 @@ namespace SignRacers.EditorTools
 
             var background = RaceHudBuilder.MakeRect("Background", root.transform);
             RaceHudBuilder.Stretch(background);
-            background.gameObject.AddComponent<Image>().color = new Color(0.05f, 0.06f, 0.12f, 1f);
+            background.gameObject.AddComponent<Image>().color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             var status = RaceHudBuilder.MakeText("StatusText", root.transform, "Loading", 80, TextAlignmentOptions.Center, Color.white);
             status.fontStyle = FontStyles.Bold;

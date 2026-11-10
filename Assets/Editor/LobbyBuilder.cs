@@ -20,8 +20,15 @@ namespace SignRacers.EditorTools
         [MenuItem("Sign Racers/Build Lobby Prefab")]
         public static void Build()
         {
+            if (EditorSceneManager.GetActiveScene().name != "Game"
+                && !EditorUtility.DisplayDialog("Open the Game scene first",
+                    "The open scene is '" + EditorSceneManager.GetActiveScene().name + "', not 'Game'. The screen would be put in that scene, " +
+                    "and it would disappear whenever the track scene is swapped. Cancel, open the Game scene, and run this again.",
+                    "Build anyway", "Cancel"))
+                return;
+
             RaceHudBuilder.EnsureFolder("Assets/Prefabs/UI");
-            Sprite panel = RaceHudBuilder.GetPanelSprite();
+            Sprite panel = null; // flat greybox: no rounded corners
 
             var root = new GameObject("LobbyCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
                                       typeof(GraphicRaycaster), typeof(CanvasGroup));
@@ -39,7 +46,7 @@ namespace SignRacers.EditorTools
             var background = RaceHudBuilder.MakeRect("Background", root.transform);
             RaceHudBuilder.Stretch(background);
             var bg = background.gameObject.AddComponent<Image>();
-            bg.color = new Color(0.05f, 0.06f, 0.12f, 1f);
+            bg.color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             var safe = RaceHudBuilder.MakeRect("SafeArea", root.transform);
             RaceHudBuilder.Stretch(safe);
@@ -52,7 +59,7 @@ namespace SignRacers.EditorTools
             code.fontStyle = FontStyles.Bold;
             RaceHudBuilder.PinTop(code.rectTransform, -130, 1000, 240);
 
-            var copy = MakeButton("CopyButton", safe, panel, new Color(0.30f, 0.34f, 0.46f), "COPY CODE", 46, new Vector2(460, 110));
+            var copy = MakeButton("CopyButton", safe, panel, new Color(0.38f, 0.38f, 0.38f), "COPY CODE", 46, new Vector2(460, 110));
             RaceHudBuilder.PinTop((RectTransform)copy.transform, -400, 460, 110);
 
             var playersHeader = RaceHudBuilder.MakeText("PlayersHeader", safe, "Players  (1/4)", 56, TextAlignmentOptions.Center, Color.white);
@@ -69,14 +76,14 @@ namespace SignRacers.EditorTools
             var trackLabel = RaceHudBuilder.MakeText("TrackLabel", safe, "TRACK", 36, TextAlignmentOptions.Center, Dim);
             RaceHudBuilder.PinTop(trackLabel.rectTransform, -1060, 900, 50);
 
-            var trackName = RaceHudBuilder.MakeText("TrackName", safe, "Hand", 72, TextAlignmentOptions.Center, new Color(1f, 0.84f, 0.25f));
+            var trackName = RaceHudBuilder.MakeText("TrackName", safe, "Hand", 72, TextAlignmentOptions.Center, Color.white);
             trackName.fontStyle = FontStyles.Bold;
             RaceHudBuilder.PinTop(trackName.rectTransform, -1115, 560, 120);
 
-            var prev = MakeButton("PrevTrackButton", safe, panel, new Color(0.30f, 0.34f, 0.46f), "<", 70, new Vector2(120, 120));
+            var prev = MakeButton("PrevTrackButton", safe, panel, new Color(0.38f, 0.38f, 0.38f), "<", 70, new Vector2(120, 120));
             RaceHudBuilder.PinTop((RectTransform)prev.transform, -1115, 120, 120);
             ((RectTransform)prev.transform).anchoredPosition = new Vector2(-360, -1115);
-            var next = MakeButton("NextTrackButton", safe, panel, new Color(0.30f, 0.34f, 0.46f), ">", 70, new Vector2(120, 120));
+            var next = MakeButton("NextTrackButton", safe, panel, new Color(0.38f, 0.38f, 0.38f), ">", 70, new Vector2(120, 120));
             RaceHudBuilder.PinTop((RectTransform)next.transform, -1115, 120, 120);
             ((RectTransform)next.transform).anchoredPosition = new Vector2(360, -1115);
 
@@ -86,8 +93,8 @@ namespace SignRacers.EditorTools
             status.rectTransform.anchoredPosition = new Vector2(0, 220);
             status.rectTransform.sizeDelta = new Vector2(900, 60);
 
-            var leave = RaceHudBuilder.MakeRoundedButton("LeaveButton", safe, panel, new Color(0.30f, 0.34f, 0.46f), "LEAVE", new Vector2(-215, 60));
-            var start = RaceHudBuilder.MakeRoundedButton("StartButton", safe, panel, new Color(0.25f, 0.65f, 0.35f), "START", new Vector2(215, 60));
+            var leave = RaceHudBuilder.MakeRoundedButton("LeaveButton", safe, panel, new Color(0.38f, 0.38f, 0.38f), "LEAVE", new Vector2(-215, 60));
+            var start = RaceHudBuilder.MakeRoundedButton("StartButton", safe, panel, new Color(0.55f, 0.55f, 0.55f), "START", new Vector2(215, 60));
 
             var view = root.AddComponent<LobbyView>();
             var so = new SerializedObject(view);
@@ -127,7 +134,7 @@ namespace SignRacers.EditorTools
             var rect = RaceHudBuilder.MakeRect(name, parent);
             rect.sizeDelta = size;
             var image = rect.gameObject.AddComponent<Image>();
-            image.sprite = sprite; image.type = Image.Type.Sliced; image.color = color;
+            image.sprite = sprite; image.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple; image.color = color;
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             var text = RaceHudBuilder.MakeText("Label", rect, label, fontSize, TextAlignmentOptions.Center, Color.white);
