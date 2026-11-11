@@ -20,9 +20,6 @@ namespace SignRacers.UI
         private const float ShakeSeconds = 0.5f;        // wrong: word shakes
         private const float FlashSeconds = 0.5f;        // colored flash over the camera
 
-        private static readonly Color GhostColor = new Color(1f, 1f, 1f, 0.35f);
-        private static readonly Color CorrectColor = new Color(0.35f, 0.95f, 0.45f);
-        private static readonly Color WrongColor = new Color(1f, 0.33f, 0.28f);
 
         [Header("Camera box (top left)")]
         [SerializeField] private RectTransform box;
@@ -33,6 +30,10 @@ namespace SignRacers.UI
         [SerializeField] private float transitionSeconds = 0.25f;
 
         [Header("Word and timer (center)")]
+        [Tooltip("Optional. Leave empty to use Resources/UiTheme (create it with Sign Racers > Create UI Theme). " +
+                 "Colours for the word, timer and flash are set there. If the Fill text has Color Gradient ticked, " +
+                 "its gradient is shown instead of the correct colour.")]
+        [SerializeField] private UiTheme theme;
         [SerializeField] private CanvasGroup signPanel;
         [SerializeField] private RectTransform wordRoot;
         [SerializeField] private TMP_Text ghostText;
@@ -48,12 +49,20 @@ namespace SignRacers.UI
         private float cameraT;
         private string shownWord = "";
         private float lastTimer;
+        private bool latched;          // a result has been shown and the panel is still on screen
+        private bool latchedCorrect;
+        private float wordWidth;       // cached text width, measured only when the word changes
 
         private void Awake()
         {
             if (box != null) mapSize = box.sizeDelta;
             if (cameraArea != null) cameraArea.blocksRaycasts = false;
         }
+
+        private UiTheme Th => UiTheme.Resolve(theme);
+        private Color correctColor => Th.correct;
+        private Color wrongColor => Th.wrong;
+        private Color ghostColor => Th.ghost;
 
         private void Update()
         {
@@ -64,6 +73,9 @@ namespace SignRacers.UI
             float since = Time.time - signs.LastResultTime;
             bool showingResult = !signing && signs.LastResult != PromptResult.None && since < ResultHoldSeconds;
             bool cameraMode = signing || showingResult;
+
+            if (signing) latched = false;
+            else if (showingResult) { latched = true; latchedCorrect = signs.LastResult == PromptResult.Correct; }
 
             if (signing)
             {
@@ -88,7 +100,7 @@ namespace SignRacers.UI
 
             if (cameraFlash != null)
             {
-                Color c = signs.LastResult == PromptResult.Correct ? CorrectColor : WrongColor;
+                Color c = signs.LastResult == PromptResult.Correct ? correctColor : wrongColor;
                 c.a = showingResult ? 0.55f * (1f - Mathf.Clamp01(since / FlashSeconds)) : 0f;
                 cameraFlash.color = c;
             }
@@ -103,19 +115,23 @@ namespace SignRacers.UI
 
             if (ghostText == null || fillText == null) return;
 
+            // Nothing to draw while the panel is hidden and no sign is in progress.
+            if (!cameraMode && signPanel != null && signPanel.alpha <= 0.001f) return;
+
             if (ghostText.text != shownWord)
             {
                 // Longer words get a smaller font so they stay inside the panel.
                 float fontSize = Mathf.Min(190f, 880f / Mathf.Max(1f, shownWord.Length * 0.62f));
                 ghostText.fontSize = fillText.fontSize = fontSize;
                 ghostText.text = fillText.text = shownWord;
+                wordWidth = fillText.preferredWidth;
             }
 
             float fill = 0f;
-            Color ghost = GhostColor;
+            Color ghost = ghostColor;
             float shakeX = 0f;
             float scale = 1f;
-            bool correct = signs.LastResult == PromptResult.Correct;
+            bool correct = latched ? latchedCorrect : signs.LastResult == PromptResult.Correct;
 
             if (showingResult)
             {
@@ -127,13 +143,20 @@ namespace SignRacers.UI
                 }
                 else
                 {
-                    ghost = Color.Lerp(GhostColor, WrongColor, Mathf.Clamp01(since / 0.1f));
+                    ghost = Color.Lerp(ghostColor, wrongColor, Mathf.Clamp01(since / 0.1f));
                     shakeX = Mathf.Sin(since * 70f) * 18f * Mathf.Clamp01(1f - since / ShakeSeconds);
                 }
             }
+            else if (!signing && latched)
+            {
+                // The result time is over but the panel is still fading out: keep the final look
+                // (filled, or red) so the word doesn't snap back to the faded white first.
+                if (correct) fill = 1f;
+                else ghost = wrongColor;
+            }
 
             ghostText.color = ghost;
-            fillText.color = CorrectColor;
+            fillText.color = fillText.enableVertexGradient ? Color.white : correctColor;
             if (wordRoot != null)
             {
                 wordRoot.anchoredPosition = new Vector2(shakeX, wordRoot.anchoredPosition.y);
@@ -144,7 +167,6 @@ namespace SignRacers.UI
             if (fillMask != null)
             {
                 float rectWidth = fillMask.rectTransform.rect.width;
-                float wordWidth = fillText.preferredWidth;
                 float left = (rectWidth - wordWidth) * 0.5f;
                 float visibleRight = left + wordWidth * fill;
                 fillMask.padding = new Vector4(0f, 0f, Mathf.Max(0f, rectWidth - visibleRight), 0f);
@@ -153,7 +175,7 @@ namespace SignRacers.UI
             // Timer bar: full at the start, empty at the end. After a wrong sign it sits at empty.
             float t = signing ? signs.TimeLeft01 : (showingResult && correct ? lastTimer : 0f);
             if (timerFill != null) timerFill.anchorMax = new Vector2(Mathf.Clamp01(t), 1f);
-            if (timerFillImage != null) timerFillImage.color = Color.Lerp(WrongColor, CorrectColor, t);
+            if (timerFillImage != null) timerFillImage.color = Th.timerColor;
             if (hint != null) hint.SetActive(signing);
         }
 

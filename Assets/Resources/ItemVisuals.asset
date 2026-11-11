@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcc86dea3635546999ab7b1c53562d02, type: 3}
+  m_Name: ItemVisuals
+  m_EditorClassIdentifier: Assembly-CSharp::SignRacers.UI.ItemVisuals
+  boost: {fileID: 7474600171507541349, guid: 378813dbf11484d7ab99442562f4412e, type: 3}
+  empty: {fileID: 0}
+  superBoost: {fileID: 0}
+  slowOthers: {fileID: 0}

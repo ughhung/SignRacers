@@ -27,14 +27,11 @@ namespace SignRacers.UI
             public Button button;
             public Image face;
             public Image cooldownRing;
+            [Tooltip("Optional. A child Image that shows the sprite from ItemVisuals.")]
+            public Image icon;
             public TMP_Text label;
         }
 
-        private static readonly Color BoostColor = new Color(1.00f, 0.60f, 0.15f);
-        private static readonly Color ItemColor = new Color(0.25f, 0.55f, 0.95f);
-        private static readonly Color EmptyColor = new Color(0.35f, 0.38f, 0.45f);
-        private static readonly Color CheckColor = new Color(1.00f, 0.90f, 0.25f);
-        private static readonly Color GoldColor = new Color(1.00f, 0.84f, 0.25f);
 
         [Header("Whole HUD")]
         [SerializeField] private CanvasGroup group;
@@ -43,6 +40,17 @@ namespace SignRacers.UI
         [SerializeField] private TMP_Text lapText;
         [SerializeField] private TMP_Text positionText;
 
+        [Header("Colours")]
+        [Tooltip("Optional. Leave empty to use Resources/UiTheme (create it with Sign Racers > Create UI Theme). " +
+                 "Position and button colours are set there.")]
+        [SerializeField] private UiTheme theme;
+        [Tooltip("Optional. Leave empty to use Resources/ItemVisuals (Sign Racers > Create Item Visuals). " +
+                 "Buttons whose sprite is empty keep their text label.")]
+        [SerializeField] private ItemVisuals visuals;
+        [Tooltip("The position number appears this many seconds after GO, then fades in.")]
+        [SerializeField] private float showPositionAfterSeconds = 3f;
+        [SerializeField] private float positionFadeSeconds = 0.6f;
+
         [Header("Buttons")]
         [SerializeField] private ButtonParts boost;
         [SerializeField] private ButtonParts[] items = new ButtonParts[2];
@@ -50,6 +58,17 @@ namespace SignRacers.UI
         private KartPathFollower kart;
         private AslPowerupSignSource signs;
         private float boostCooldownTotal = 1.5f;
+        private int shownPlace = -1;
+
+        private UiTheme Th => UiTheme.Resolve(theme);
+        private ItemVisuals Art => ItemVisuals.Resolve(visuals);
+        private Color firstPlaceTop => Th.firstPlaceTop;
+        private Color firstPlaceBottom => Th.firstPlaceBottom;
+        private Color otherPlacesColor => Th.otherPlaces;
+        private Color BoostColor => Th.boostButton;
+        private Color ItemColor => Th.itemButton;
+        private Color EmptyColor => Th.emptyButton;
+        private Color CheckColor => Th.activeButton;
 
         private void Awake()
         {
@@ -86,10 +105,31 @@ namespace SignRacers.UI
 
             if (positionText != null)
             {
+                // Hidden until a few seconds into the race, then fades in.
+                float fade = race.State == RaceState.Racing
+                    ? Mathf.Clamp01((race.RaceTime - showPositionAfterSeconds) / Mathf.Max(0.05f, positionFadeSeconds))
+                    : 0f;
+                positionText.canvasRenderer.SetAlpha(fade);
+
                 var standings = RaceManager.GetStandings();
                 int place = Mathf.Max(1, standings.IndexOf(kart) + 1);
-                positionText.text = $"{place}<size=55%>{Suffix(place)}</size>";
-                positionText.color = place == 1 ? GoldColor : Color.white;
+                if (place != shownPlace)
+                {
+                    // Only touch the text when the place changes (saves work every frame).
+                    shownPlace = place;
+                    positionText.text = $"{place}<size=55%>{Suffix(place)}</size>";
+                    if (place == 1)
+                    {
+                        positionText.enableVertexGradient = true;
+                        positionText.colorGradient = new VertexGradient(firstPlaceTop, firstPlaceTop, firstPlaceBottom, firstPlaceBottom);
+                        positionText.color = Color.white; // the gradient shows as is
+                    }
+                    else
+                    {
+                        positionText.enableVertexGradient = false;
+                        positionText.color = otherPlacesColor;
+                    }
+                }
             }
         }
 
@@ -118,7 +158,8 @@ namespace SignRacers.UI
             boostCooldownTotal = Mathf.Max(boostCooldownTotal, cooldown);
 
             SetButton(boost, boostActive ? "CHECK" : "BOOST", boostActive ? CheckColor : BoostColor,
-                      boostActive || signs.CanStartBoost, cooldown > 0.001f ? cooldown / boostCooldownTotal : 0f);
+                      boostActive || signs.CanStartBoost, cooldown > 0.001f ? cooldown / boostCooldownTotal : 0f,
+                      boostActive ? null : Art.boost);
 
             // ITEM 1 and ITEM 2
             for (int slot = 0; slot < items.Length; slot++)
@@ -127,7 +168,7 @@ namespace SignRacers.UI
                 bool active = signs.IsSigning && signs.PendingAction == PowerupAction.Item && signs.PendingSlot == slot;
                 string label = active ? "CHECK" : item == ItemType.None ? "EMPTY" : ItemLabel(item);
                 Color color = active ? CheckColor : item == ItemType.None ? EmptyColor : ItemColor;
-                SetButton(items[slot], label, color, active || signs.CanStartItem(slot), 0f);
+                SetButton(items[slot], label, color, active || signs.CanStartItem(slot), 0f, active ? null : Art.For(item));
             }
         }
 
@@ -141,9 +182,17 @@ namespace SignRacers.UI
             }
         }
 
-        private static void SetButton(ButtonParts parts, string label, Color color, bool interactable, float ring01)
+        private static void SetButton(ButtonParts parts, string label, Color color, bool interactable, float ring01, Sprite sprite)
         {
             if (parts == null) return;
+            // With a sprite the icon shows and the text hides; without one the text label stays.
+            if (parts.icon != null)
+            {
+                bool hasIcon = sprite != null;
+                if (parts.icon.sprite != sprite) parts.icon.sprite = sprite;
+                if (parts.icon.enabled != hasIcon) parts.icon.enabled = hasIcon;
+                if (parts.label != null && parts.label.enabled == hasIcon) parts.label.enabled = !hasIcon;
+            }
             if (parts.label != null) parts.label.text = label;
             if (parts.face != null) parts.face.color = color;
             if (parts.button != null) parts.button.interactable = interactable;

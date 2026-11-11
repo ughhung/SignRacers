@@ -35,7 +35,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 6890098955180718095}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &5196602184046862746
@@ -53,7 +54,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3181471486688040680}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -187,7 +188,7 @@ MonoBehaviour:
   signingWindow: 3
   boostCooldown: 1.5
   lockoutAfterResult: 0.5
-  debugKeys: 1
+  enableDebugKeys: 0
 --- !u!114 &2220128436237467953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -205,3 +206,114 @@ MonoBehaviour:
     RawValue: 0
   _Ready:
     RawValue: 0
+--- !u!1001 &6885550558726235613
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 591387942589142645}
+    m_Modifications:
+    - target: {fileID: 1982185965677268, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_Name
+      value: SM_Veh_QuadBike_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1982185965677268, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5778441533691136415}
+  m_SourcePrefab: {fileID: 100100000, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+--- !u!4 &6881552838745440967 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4024318713292570, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+  m_PrefabInstance: {fileID: 6885550558726235613}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &6881825572500573095 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4297054394658426, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+  m_PrefabInstance: {fileID: 6885550558726235613}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &6882062591054992515 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4394433404006750, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+  m_PrefabInstance: {fileID: 6885550558726235613}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6884148996504440585 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1982185965677268, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+  m_PrefabInstance: {fileID: 6885550558726235613}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5778441533691136415
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6884148996504440585}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12d0e181f46a3453596748a5b0079a9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SignRacers.WheelSpinner
+  wheels:
+  - {fileID: 6890109240186285361}
+  - {fileID: 6882062591054992515}
+  - {fileID: 6881552838745440967}
+  - {fileID: 6881825572500573095}
+  wheelRadius: 0.35
+  axle: {x: 1, y: 0, z: 0}
+  reverse: 0
+  smoothing: 12
+--- !u!4 &6890098955180718095 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4767202926960082, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+  m_PrefabInstance: {fileID: 6885550558726235613}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &6890109240186285361 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4774187989076204, guid: 58deea2eee50e7b468cd60c9cee494f1, type: 3}
+  m_PrefabInstance: {fileID: 6885550558726235613}
+  m_PrefabAsset: {fileID: 0}

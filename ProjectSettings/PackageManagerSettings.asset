@@ -30,8 +30,8 @@ MonoBehaviour:
     m_Compliance:
       m_Status: 0
       m_Violations: []
-  - m_Id: scoped:project:SLRGTK
-    m_Name: SLRGTK
+  - m_Id: scoped:project:SLRGTk beta
+    m_Name: SLRGTk beta
     m_Url: https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk
     m_Scopes:
     - edu.gatech.ccg
@@ -41,7 +41,7 @@ MonoBehaviour:
     m_Compliance:
       m_Status: 0
       m_Violations: []
-  m_UserSelectedRegistryName: SLRGTK
+  m_UserSelectedRegistryName: SLRGTk beta
   m_UserAddingNewScopedRegistry: 0
   m_RegistryInfoDraft:
     m_Modified: 0
