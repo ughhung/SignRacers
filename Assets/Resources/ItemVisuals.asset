@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcc86dea3635546999ab7b1c53562d02, type: 3}
   m_Name: ItemVisuals
   m_EditorClassIdentifier: Assembly-CSharp::SignRacers.UI.ItemVisuals
-  boost: {fileID: 7474600171507541349, guid: 378813dbf11484d7ab99442562f4412e, type: 3}
+  boost: {fileID: -2445870203819063848, guid: aab06a0bb1c9441249b5826771e9bfab, type: 3}
   empty: {fileID: 0}
-  superBoost: {fileID: 0}
-  slowOthers: {fileID: 0}
+  superBoost: {fileID: 5856981904466133357, guid: dba0c80d42e244ffba55e9f24609d018, type: 3}
+  slowOthers: {fileID: -8289632032792137795, guid: 33134ae4284354271b0e89ec14100cdb, type: 3}

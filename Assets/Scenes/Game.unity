@@ -127,6 +127,78 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 267117610567756532, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 267117610567756532, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1871995079634183464, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1871995079634183464, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1871995079634183464, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1871995079634183464, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1871995079634183464, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1871995079634183464, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2454546048137578218, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2454546048137578218, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3527899382677815035, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3527899382677815035, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3527899382677815035, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3527899382677815035, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3527899382677815035, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3527899382677815035, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3835784974924779858, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3835784974924779858, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4049505010476087078, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
@@ -237,7 +309,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6027847087393689952, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 1509949439
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 6027847087393689952, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -253,7 +325,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6823820960015143622, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4285788761
+      value: 4278255426
       objectReference: {fileID: 0}
     - target: {fileID: 6823820960015143622, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -509,7 +581,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9b65250b7d9f49a09ef4c8cbad4238d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SignRacers.Core.SimpleFollowCamera
-  distanceBehind: 6
+  distanceBehind: 7
   height: 5
   lookAhead: 4
   positionSmoothing: 100

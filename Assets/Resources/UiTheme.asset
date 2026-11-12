@@ -19,7 +19,7 @@ MonoBehaviour:
   firstPlaceTop: {r: 0.9411765, g: 0.827451, b: 0.40784314, a: 1}
   firstPlaceBottom: {r: 0.9372549, g: 0.5803922, b: 0.41568628, a: 1}
   otherPlaces: {r: 1, g: 1, b: 1, a: 1}
-  boostButton: {r: 1, g: 0.6, b: 0.15, a: 1}
-  itemButton: {r: 0.25, g: 0.55, b: 0.95, a: 1}
-  emptyButton: {r: 0.35, g: 0.38, b: 0.45, a: 1}
+  boostButton: {r: 0.7169812, g: 0.67301536, b: 0.67301536, a: 0.27450982}
+  itemButton: {r: 0.7176471, g: 0.6745098, b: 0.6745098, a: 0.27450982}
+  emptyButton: {r: 0.7176471, g: 0.6745098, b: 0.6745098, a: 0.27450982}
   activeButton: {r: 1, g: 0.9, b: 0.25, a: 1}

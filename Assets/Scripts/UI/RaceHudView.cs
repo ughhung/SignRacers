@@ -101,7 +101,7 @@ namespace SignRacers.UI
 
         private void UpdateTopTexts(RaceManager race)
         {
-            if (lapText != null) lapText.text = $"LAP {Mathf.Max(1, kart.CurrentLap)}/{race.TotalLaps}";
+            if (lapText != null) lapText.text = $"{Mathf.Max(1, kart.CurrentLap)}/{race.TotalLaps}"; // the lap icon next to it says what it is
 
             if (positionText != null)
             {
@@ -166,7 +166,7 @@ namespace SignRacers.UI
             {
                 ItemType item = kart.GetItem(slot);
                 bool active = signs.IsSigning && signs.PendingAction == PowerupAction.Item && signs.PendingSlot == slot;
-                string label = active ? "CHECK" : item == ItemType.None ? "EMPTY" : ItemLabel(item);
+                string label = active ? "CHECK" : item == ItemType.None ? "" : ItemLabel(item); // empty slot: no text
                 Color color = active ? CheckColor : item == ItemType.None ? EmptyColor : ItemColor;
                 SetButton(items[slot], label, color, active || signs.CanStartItem(slot), 0f, active ? null : Art.For(item));
             }
