@@ -236,13 +236,19 @@ namespace SignRacers.Race
             practicing = false;
             if (recognizer == null || !recognizer.IsReady) return;
 
-            AslResult result = recognizer.Recognize();
-            bool correct = result.HasLabel &&
-                           string.Equals(result.Label, practiceWord, System.StringComparison.OrdinalIgnoreCase);
+            string word = practiceWord;
+            practiceMessage = "Checking...";
+            // The toolkit answers a few frames later.
+            recognizer.Recognize(result =>
+            {
+                if (this == null) return;
+                bool correct = result.HasLabel &&
+                               string.Equals(result.Label, word, System.StringComparison.OrdinalIgnoreCase);
 
-            practiceMessage = correct
-                ? $"You got {SignLibrary.Display(practiceWord)}!"
-                : $"Saw: {(result.HasLabel ? SignLibrary.Display(result.Label) : "nothing")}. Try again.";
+                practiceMessage = correct
+                    ? $"You got {SignLibrary.Display(word)}!"
+                    : $"Saw: {(result.HasLabel ? SignLibrary.Display(result.Label) : "nothing")}. Try again.";
+            });
         }
 
         // ---------------- Helpers ----------------

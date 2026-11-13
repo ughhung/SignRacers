@@ -1,0 +1,513 @@
+# Category of each sign, used by the Solo picker filter chips. Format: word,Category
+# Words not listed here show under the 'Other' chip. Edit freely.
+#chips: Animals,Food,People,Body,Home,Outside,Clothes,Things,Actions,Feelings,Colors,Describing,Little words,Phrases
+about,Little words
+after,Little words
+airplane,Things
+allgone,Phrases
+alligator,Animals
+all,Little words
+alot,Little words
+am,Little words
+and,Little words
+animal,Animals
+another,Little words
+an,Little words
+ant,Animals
+any,Little words
+apple,Food
+a,Little words
+are,Little words
+arm,Body
+around,Little words
+asleep,Feelings
+aunt,People
+awake,Feelings
+baabaa,Animals
+baby,People
+babysitter,People
+backyard,Home
+bad,Describing
+balloon,Things
+ball,Things
+basement,Home
+basket,Things
+bath,Home
+bathroom,Home
+bat,Things
+beads,Things
+bear,Animals
+because,Little words
+bed,Home
+bedroom,Home
+bee,Animals
+before,Little words
+bellybutton,Body
+belt,Clothes
+bench,Home
+be,Little words
+beside,Little words
+better,Describing
+bib,Clothes
+bicycle,Things
+big,Describing
+bird,Animals
+bite,Actions
+black,Colors
+block,Things
+blow,Actions
+blue,Colors
+boat,Things
+book,Things
+boots,Clothes
+boy,People
+breakfast,Food
+break,Actions
+bring,Actions
+brother,People
+brown,Colors
+bubbles,Things
+bug,Animals
+build,Actions
+bump,Actions
+bunny,Animals
+bus,Things
+but,Little words
+butterfly,Animals
+button,Things
+buy,Actions
+bye,Phrases
+callonphone,Actions
+camera,Things
+candy,Food
+can,Little words
+careful,Describing
+car,Things
+carrot,Food
+cartcarriage,Things
+catch,Actions
+cat,Animals
+cereal,Food
+chair,Home
+chalk,Things
+chase,Actions
+cheek,Body
+cheese,Food
+chicken,Animals
+child,People
+children,People
+chin,Body
+chocolate,Food
+choose,Actions
+clap,Actions
+clean,Describing
+climb,Actions
+close,Actions
+closet,Home
+cloud,Outside
+clown,People
+coats,Clothes
+coffee,Food
+cold,Describing
+cook,Food
+cover,Actions
+cowboy,People
+cow,Animals
+crayon,Things
+crib,Home
+cry,Actions
+cute,Describing
+cut,Actions
+dad,People
+dance,Actions
+dark,Describing
+day,Little words
+deer,Animals
+diaper,Clothes
+did,Little words
+dime,Things
+dinner,Food
+dinosaur,Animals
+dirty,Describing
+doctor,People
+does,Little words
+dog,Animals
+doll,Things
+donkey,Animals
+dont,Little words
+door,Home
+do,Little words
+down,Little words
+downtown,Outside
+drawer,Home
+draw,Actions
+dress,Clothes
+drink,Food
+drive,Actions
+drop,Actions
+dryer,Home
+dry,Describing
+duck,Animals
+dump,Actions
+each,Little words
+ear,Body
+eat,Food
+elephant,Animals
+empty,Describing
+enter,Actions
+every,Little words
+eye,Body
+face,Body
+fall,Actions
+farm,Animals
+fast,Describing
+feed,Actions
+feet,Body
+find,Actions
+fine,Describing
+finger,Body
+finish,Actions
+fireman,People
+firetruck,Things
+first,Little words
+fish,Animals
+fit,Actions
+fix,Actions
+flag,Things
+flipflop,Clothes
+flower,Outside
+for,Little words
+frenchfries,Food
+friend,People
+frog,Animals
+fullfood,Food
+full,Describing
+game,Things
+garage,Home
+garbage,Things
+garden,Home
+gentle,Describing
+get,Actions
+gift,Things
+giraffe,Animals
+girl,People
+givemefive,Actions
+give,Actions
+glasses,Clothes
+glasswindow,Home
+gloves,Clothes
+glue,Things
+good,Describing
+goose,Animals
+gopotty,Actions
+go,Actions
+grandma,People
+grandpa,People
+grapes,Food
+grass,Outside
+green,Colors
+gum,Food
+hair,Body
+hammer,Things
+hand,Body
+happy,Feelings
+hard,Describing
+hate,Actions
+hat,Clothes
+have,Actions
+haveto,Actions
+head,Body
+hear,Actions
+heavy,Describing
+helicopter,Things
+hello,Phrases
+help,Actions
+hen,Animals
+hesheit,Little words
+hide,Actions
+highchair,Home
+high,Describing
+hit,Actions
+hold,Actions
+home,Home
+horse,Animals
+hose,Outside
+hot,Describing
+how,Little words
+hug,Actions
+hungry,Feelings
+hurry,Actions
+hurt,Feelings
+icecream,Food
+if,Little words
+insidein,Little words
+into,Little words
+is,Little words
+jar,Things
+jeans,Clothes
+jelly,Food
+juice,Food
+jump,Actions
+kick,Actions
+kiss,Actions
+kitchen,Home
+kitty,Animals
+knife,Things
+knock,Actions
+lady,People
+lamp,Home
+last,Little words
+later,Little words
+lawnmower,Things
+leg,Body
+letme,Actions
+lick,Actions
+lightbulb,Home
+like,Actions
+lion,Animals
+lips,Body
+listen,Actions
+livingroom,Home
+long,Describing
+look,Actions
+loud,Describing
+lunch,Food
+mad,Feelings
+mailman,People
+make,Actions
+man,People
+many,Little words
+melon,Food
+milk,Food
+minemy,Little words
+mom,People
+monkey,Animals
+moon,Outside
+moose,Animals
+more,Little words
+morning,Little words
+motorcycle,Things
+mouse,Animals
+mouth,Body
+napkin,Things
+nap,Actions
+naughty,Describing
+necklace,Clothes
+new,Describing
+nice,Describing
+night,Little words
+noisy,Describing
+none,Little words
+no,Phrases
+nose,Body
+now,Little words
+nurse,People
+nuts,Food
+of,Little words
+old,Describing
+on,Little words
+open,Actions
+orange,Colors
+outside,Outside
+oven,Home
+over,Little words
+owie,Feelings
+owl,Animals
+paint,Things
+pajamas,Clothes
+pants,Clothes
+party,Things
+peas,Food
+peekaboo,Phrases
+penguin,Animals
+penis,Body
+penny,Things
+pen,Things
+people,People
+person,People
+petsname,Animals
+pick,Actions
+pig,Animals
+pillow,Home
+pizza,Food
+plants,Outside
+plate,Things
+playdough,Things
+playgroundschool,Outside
+playpen,Home
+play,Actions
+please,Phrases
+police,People
+pony,Animals
+pool,Outside
+poor,Describing
+popsicle,Food
+porch,Home
+potatochip,Food
+potato,Food
+pour,Actions
+pretend,Actions
+pretty,Describing
+pull,Actions
+pumpkin,Food
+puppy,Animals
+push,Actions
+put,Actions
+puzzle,Things
+quiet,Describing
+radio,Things
+rain,Outside
+read,Actions
+red,Colors
+refrigerator,Home
+ride,Actions
+rip,Actions
+rockingchair,Home
+rock,Outside
+roof,Home
+room,Home
+rooster,Animals
+run,Actions
+sad,Feelings
+same,Describing
+sandbox,Home
+say,Actions
+scared,Feelings
+scarf,Clothes
+scissors,Things
+see,Actions
+shake,Actions
+share,Actions
+sheep,Animals
+shhh,Phrases
+shirt,Clothes
+shoe,Clothes
+shopping,Outside
+shorts,Clothes
+shoulder,Body
+shovel,Outside
+shower,Actions
+show,Actions
+sick,Feelings
+sidewalk,Outside
+sing,Actions
+sink,Home
+sister,People
+sit,Actions
+skate,Actions
+sky,Outside
+sled,Things
+sleepy,Feelings
+slide,Things
+slipper,Clothes
+slow,Describing
+smile,Actions
+snack,Food
+snowman,Outside
+snow,Outside
+snowsuit,Clothes
+sobig,Describing
+sock,Clothes
+sodapop,Food
+some,Little words
+so,Little words
+spill,Actions
+splash,Actions
+sprinkler,Outside
+squirrel,Animals
+stairs,Home
+stand,Actions
+star,Outside
+stay,Actions
+stick,Things
+sticky,Describing
+stone,Outside
+stop,Actions
+store,Outside
+story,Things
+stove,Home
+street,Outside
+stroller,Things
+stuck,Describing
+sun,Outside
+sweater,Clothes
+sweep,Actions
+swim,Actions
+swing,Things
+table,Home
+taken,Actions
+talk,Actions
+tall,Describing
+taste,Food
+teacher,People
+thankyou,Phrases
+that,Little words
+then,Little words
+the,Little words
+there,Little words
+think,Actions
+thirsty,Feelings
+throw,Actions
+tickle,Actions
+tiger,Animals
+tights,Clothes
+time,Little words
+tiny,Describing
+tired,Feelings
+toast,Food
+tomorrow,Little words
+tongue,Body
+toothbrush,Things
+tooth,Body
+to,Little words
+touch,Actions
+toy,Things
+tractor,Things
+train,Things
+trash,Things
+tree,Outside
+truck,Things
+trytryto,Actions
+turkey,Animals
+turtle,Animals
+tv,Things
+uhoh,Phrases
+uncle,People
+underwear,Clothes
+up,Little words
+vacuum,Home
+vagina,Body
+vitamins,Food
+wait,Actions
+walk,Actions
+wantto,Actions
+washingmachine,Home
+wash,Actions
+waterhose,Outside
+water,Food
+wet,Describing
+weus,Little words
+what,Little words
+when,Little words
+where,Little words
+which,Little words
+white,Colors
+who,Little words
+why,Little words
+window,Home
+wind,Outside
+wipe,Actions
+wish,Actions
+wolf,Animals
+work,Actions
+write,Actions
+yard,Home
+yellow,Colors
+yes,Phrases
+yesterday,Little words
+yogurt,Food
+yourself,Little words
+yucky,Describing
+yumyum,Phrases
+zebra,Animals
+zipper,Clothes

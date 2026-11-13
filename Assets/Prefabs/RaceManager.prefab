@@ -48,7 +48,7 @@ MonoBehaviour:
   SortKey: 993226777
   SendPriority: 1
   EnableInterpolation: 1
-  Flags: 262146
+  Flags: 131074
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 5027798551520919791}
@@ -72,5 +72,15 @@ MonoBehaviour:
   votingEnabled: 1
   votingSeconds: 45
   reviewSeconds: 60
+  soloPractice: 1
+  publicMinPlayers: 2
+  publicLobbySeconds: 20
+  publicFullRoomSeconds: 5
+  missingPlayerSeconds: 8
   _RaceTime: 0
   _FinalWordCount: 0
+  _TrackId: 0
+  _IsPublicRoom:
+    RawValue: 0
+  _OpenToPublic:
+    RawValue: 0

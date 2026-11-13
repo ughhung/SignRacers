@@ -744,7 +744,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5867740760772452843, guid: ccfb00d20ea084d80999b9de2754d5d5, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 2801795071
+      value: 4283046958
       objectReference: {fileID: 0}
     - target: {fileID: 5867740760772452843, guid: ccfb00d20ea084d80999b9de2754d5d5, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -808,13 +808,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d19fa41af883a4d9f81a7e6e9d693d8e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SignRacers.Signs.AslRecognizer
-  previewImage: {fileID: 1587163333}
-  forceFlipPreview: 1
-  mirrorPreview: 1
-  gallery: popsign
-  topK: 5
-  enableOverlay: 1
-  drawPose: 1
+  recognizer: {fileID: 0}
+  warmupSeconds: 2
+  answerTimeoutSeconds: 3
 --- !u!4 &945124871
 Transform:
   m_ObjectHideFlags: 0
@@ -1129,17 +1125,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b259bc5ec299c4ef0a26337bbfee34aa, type: 3}
---- !u!114 &1587163333 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 8483175832446762621, guid: 335005cb66b054afea81d3f3ed880a83, type: 3}
-  m_PrefabInstance: {fileID: 19539425}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
 --- !u!1001 &1641839765
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1252,9 +1237,25 @@ PrefabInstance:
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
+    - target: {fileID: 7229065790169828667, guid: cf693bbe812c04970a7294de5cfbe56f, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4283046958
+      objectReference: {fileID: 0}
+    - target: {fileID: 7229065790169828667, guid: cf693bbe812c04970a7294de5cfbe56f, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 7621649179706917635, guid: cf693bbe812c04970a7294de5cfbe56f, type: 3}
       propertyPath: m_Name
       value: VotingCanvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 8914096522573975993, guid: cf693bbe812c04970a7294de5cfbe56f, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 1934236718
+      objectReference: {fileID: 0}
+    - target: {fileID: 8914096522573975993, guid: cf693bbe812c04970a7294de5cfbe56f, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

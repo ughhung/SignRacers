@@ -277,6 +277,61 @@
       },
       "url": "https://packages.unity.com"
     },
+    "edu.gatech.ccg.slrgtk": {
+      "version": "0.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.androidjni": "1.0.0",
+        "com.unity.ugui": "2.0.0"
+      },
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk"
+    },
+    "edu.gatech.ccg.slrgtk.gallery.popsign": {
+      "version": "0.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "edu.gatech.ccg.slrgtk": "0.2.0"
+      },
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk"
+    },
+    "edu.gatech.ccg.slrgtk.ios": {
+      "version": "0.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "edu.gatech.ccg.slrgtk": "0.2.0"
+      },
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk"
+    },
+    "edu.gatech.ccg.slrgtk.macos": {
+      "version": "0.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "edu.gatech.ccg.slrgtk": "0.2.0"
+      },
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk"
+    },
+    "edu.gatech.ccg.slrgtk.models.lite": {
+      "version": "0.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "edu.gatech.ccg.slrgtk": "0.2.0"
+      },
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk"
+    },
+    "edu.gatech.ccg.slrgtk.references.popsign": {
+      "version": "0.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "edu.gatech.ccg.slrgtk": "0.2.0"
+      },
+      "url": "https://signdata.cc.gatech.edu/res/toolkit/beta/unity/slrgtk"
+    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,

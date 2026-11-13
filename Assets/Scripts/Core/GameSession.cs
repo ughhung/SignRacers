@@ -20,6 +20,11 @@ namespace SignRacers.Core
         private const string CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
         private const string LastPicksKey = "SignRacers.LastSigns";
 
+        /// <summary>Room tag so the two kinds of public rooms never mix. Quick Play only ever matches "quick" rooms; the browse list only shows "hosted" ones.</summary>
+        public const string KindKey = "kind";
+        public const string KindQuick = "quick";
+        public const string KindHosted = "hosted";
+
         public static SessionMode Mode = SessionMode.Solo;
 
         /// <summary>The signs for this race. Null when the race scene is played directly in the Editor, or in multiplayer until voting exists.</summary>
@@ -28,11 +33,14 @@ namespace SignRacers.Core
         /// <summary>True once a race was launched from the menu (so the race scene obeys the menu's choices).</summary>
         public static bool StartedFromMenu;
 
-        /// <summary>Multiplayer: the room's code. It is also the Photon session name.</summary>
+        /// <summary>Multiplayer: the room's code. It is also the Photon session name. Empty for a public (Quick Play) room.</summary>
         public static string RoomCode = "";
 
         /// <summary>Multiplayer: true if this player is creating the room, false if joining an existing one.</summary>
         public static bool IsCreatingRoom;
+
+        /// <summary>Multiplayer: true for Quick Play. The player joins any open public room (or starts a new one); there is no room code.</summary>
+        public static bool IsPublic;
 
         /// <summary>A message for the menu to show after a failed join.</summary>
         public static string LastError = "";

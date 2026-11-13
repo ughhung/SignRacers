@@ -21,6 +21,8 @@ namespace SignRacers.Race
     /// It lives on a spawned NetworkObject (see GameBootstrap). In Single mode the local
     /// player owns it; in Shared mode the master client does. Only the owner changes state.
     /// If no RaceManager exists in the scene, karts just drive freely like before.
+    /// Quick Play (public) rooms: the lobby starts by itself on a timer once enough players are in,
+    /// and the track is the one with the most votes (see PlayerVote.TrackVote).
     /// </summary>
     [RequireComponent(typeof(NetworkObject))]
     public class RaceManager : NetworkBehaviour
@@ -43,8 +45,22 @@ namespace SignRacers.Race
         [Tooltip("Solo: show the practice screen (try each of your signs on the camera) before the race.")]
         [SerializeField] private bool soloPractice = true;
 
+        [Header("Quick Play (public rooms)")]
+        [Tooltip("Players needed before the lobby timer starts. Use 1 to test Quick Play alone.")]
+        [SerializeField] private int publicMinPlayers = 2;
+        [Tooltip("Seconds the lobby waits once enough players are in. Late joiners can still join until it ends.")]
+        [SerializeField] private float publicLobbySeconds = 20f;
+        [Tooltip("When the room fills up (4 players), the timer is cut down to this.")]
+        [SerializeField] private float publicFullRoomSeconds = 5f;
+
+        [Tooltip("Online: if a player leaves before the race starts, wait this many seconds for them, then carry on without them.")]
+        [SerializeField] private float missingPlayerSeconds = 8f;
+
         private float cameraWait;
+        private float missingWait;
         private int requiredKarts; // set when the host starts from the lobby
+        private bool fullHandled;
+        private int[] trackTally = new int[0];
 
         [Networked] private int StateValue { get; set; }
         [Networked] private TickTimer CountdownTimer { get; set; }
@@ -53,8 +69,22 @@ namespace SignRacers.Race
         [Networked, Capacity(5)] private NetworkArray<int> FinalWords => default;
         [Networked] public int FinalWordCount { get; set; }
 
-        /// <summary>Which track the room races on (a position in TrackCatalog). The host picks it in the lobby.</summary>
+        /// <summary>Which track the room races on (a position in TrackCatalog). Private rooms: the host picks it. Quick Play: the most voted track.</summary>
         [Networked] public int TrackId { get; set; }
+
+        /// <summary>True for a Quick Play room (public, starts on a timer, track by vote).</summary>
+        [Networked] public NetworkBool IsPublicRoom { get; set; }
+        [Networked] private TickTimer LobbyTimer { get; set; }
+        /// <summary>A host-made room the host has opened to Quick Play players (the host still picks the track and presses START).</summary>
+        [Networked] public NetworkBool OpenToPublic { get; set; }
+
+        /// <summary>Owner only, in a private-style lobby: show the room to Quick Play (public) or hide it again (private).</summary>
+        public void SetOpenToPublic(bool open)
+        {
+            if (!HasStateAuthority || State != RaceState.Lobby || IsPublicRoom || IsSolo) return;
+            OpenToPublic = open;
+            if (Runner.SessionInfo.IsValid) Runner.SessionInfo.IsVisible = open;
+        }
 
         private bool trackLoading;
         private string trackFailed;
@@ -62,10 +92,10 @@ namespace SignRacers.Race
         /// <summary>True once this device has the room's chosen track loaded.</summary>
         public bool TrackReady => !trackLoading && TrackLoader.LoadedName == TrackCatalog.SceneName(TrackId);
 
-        /// <summary>Host only, lobby only: step to the next (+1) or previous (-1) track.</summary>
+        /// <summary>Host only, lobby only (private rooms): step to the next (+1) or previous (-1) track.</summary>
         public void ChangeTrack(int step)
         {
-            if (!HasStateAuthority || State != RaceState.Lobby) return;
+            if (!HasStateAuthority || State != RaceState.Lobby || IsPublicRoom) return;
             TrackId = TrackCatalog.Wrap(TrackId + step);
         }
 
@@ -95,6 +125,22 @@ namespace SignRacers.Race
         public int PlayersNeeded => requiredKarts > 0 ? requiredKarts : playersNeeded;
         public int KartsPresent => KartPathFollower.All.Count;
         public int ReadyKarts => KartPathFollower.All.Count(k => k.IsSignReady);
+
+        /// <summary>Quick Play lobby: players needed before the timer starts.</summary>
+        public int PublicMinPlayers => publicMinPlayers;
+
+        /// <summary>Quick Play lobby: is the start timer running?</summary>
+        public bool LobbyCountdownRunning => LobbyTimer.IsRunning;
+
+        /// <summary>Quick Play lobby: seconds until the room moves on (0 when the timer isn't running).</summary>
+        public float LobbySecondsLeft
+        {
+            get
+            {
+                float? remaining = LobbyTimer.RemainingTime(Runner);
+                return remaining.HasValue ? Mathf.Max(0f, remaining.Value) : 0f;
+            }
+        }
 
         /// <summary>Seconds left in the current voting or review phase.</summary>
         public float PhaseSecondsLeft
@@ -127,23 +173,29 @@ namespace SignRacers.Race
         {
             Instance = this;
 
-            // An online room starts in the lobby. Everything else goes straight to
-            // waiting for cameras. (Only the owner sets state, others just receive it.)
             // An online room starts in the lobby. Solo picks its signs on the menu, then gets the practice
             // screen (the lobby is skipped). Played directly in the editor: straight to waiting.
             // (Only the owner sets state, others just receive it.)
             if (HasStateAuthority && GameSession.StartedFromMenu &&
                 (GameSession.Mode == SessionMode.Multiplayer || soloPractice))
                 StateValue = (int)RaceState.Lobby;
+
+            if (HasStateAuthority && GameSession.StartedFromMenu)
+                IsPublicRoom = GameSession.Mode == SessionMode.Multiplayer && GameSession.IsPublic;
         }
 
-        /// <summary>Host only: leave the lobby, close the room to newcomers, and get the race going.</summary>
+        /// <summary>Owner only: leave the lobby, close the room to newcomers, and get the race going. (Private rooms: the host taps START. Quick Play: the lobby timer calls it.)</summary>
         public void StartFromLobby()
         {
             if (!HasStateAuthority || State != RaceState.Lobby) return;
 
             requiredKarts = KartsPresent; // everyone who is here now
-            if (!IsSolo && Runner.SessionInfo.IsValid) Runner.SessionInfo.IsOpen = false; // nobody joins mid-race
+            LobbyTimer = default;
+            if (!IsSolo && Runner.SessionInfo.IsValid)
+            {
+                Runner.SessionInfo.IsOpen = false;    // nobody joins mid-race
+                Runner.SessionInfo.IsVisible = false; // and Quick Play no longer lists it
+            }
 
             if (votingEnabled)
             {
@@ -154,6 +206,55 @@ namespace SignRacers.Race
             {
                 StateValue = (int)RaceState.Waiting;
             }
+        }
+
+        /// <summary>Quick Play lobby, owner only: the track follows the most votes (a tie keeps the current track), and the start timer runs once enough players are in.</summary>
+        private void TickPublicLobby()
+        {
+            ApplyTrackVotes();
+
+            int players = KartsPresent;
+            if (players < publicMinPlayers)
+            {
+                LobbyTimer = default; // somebody left: wait for more
+                fullHandled = false;
+                return;
+            }
+
+            if (!LobbyTimer.IsRunning) LobbyTimer = TickTimer.CreateFromSeconds(Runner, publicLobbySeconds);
+
+            if (players >= GameSession.MaxPlayers && !fullHandled)
+            {
+                fullHandled = true; // a full room doesn't need to wait the whole time
+                float? left = LobbyTimer.RemainingTime(Runner);
+                if (!left.HasValue || left.Value > publicFullRoomSeconds)
+                    LobbyTimer = TickTimer.CreateFromSeconds(Runner, publicFullRoomSeconds);
+            }
+            else if (players < GameSession.MaxPlayers) fullHandled = false;
+
+            if (LobbyTimer.Expired(Runner)) StartFromLobby();
+        }
+
+        private void ApplyTrackVotes()
+        {
+            int count = TrackCatalog.Count;
+            if (count <= 1) return;
+            if (trackTally.Length != count) trackTally = new int[count];
+            System.Array.Clear(trackTally, 0, count);
+
+            foreach (var vote in PlayerVote.All)
+            {
+                int track = vote.TrackVote - 1;
+                if (track >= 0 && track < count) trackTally[track]++;
+            }
+
+            int best = TrackCatalog.Wrap(TrackId);
+            int bestVotes = trackTally[best];
+            for (int i = 0; i < count; i++)
+            {
+                if (trackTally[i] > bestVotes) { best = i; bestVotes = trackTally[i]; }
+            }
+            if (best != TrackId) TrackId = best;
         }
 
         /// <summary>Solo: the signs were picked on the menu, so go straight to the practice screen with them.</summary>
@@ -199,14 +300,26 @@ namespace SignRacers.Race
                 case RaceState.Lobby:
                     // Solo skips the lobby screen: go on to the practice screen once the player's kart exists.
                     if (IsSolo && PlayerVote.All.Count > 0) StartSoloPractice();
+                    else if (IsPublicRoom && !IsSolo) TickPublicLobby();
                     break;
 
                 case RaceState.Waiting:
                     if (KartsPresent < PlayersNeeded)
                     {
                         cameraWait = 0f;
+                        // A player who left (or lost connection) is not coming back: the room is closed. Stop waiting for them.
+                        if (!IsSolo && requiredKarts > 0 && KartsPresent > 0)
+                        {
+                            missingWait += Runner.DeltaTime;
+                            if (missingWait >= missingPlayerSeconds)
+                            {
+                                requiredKarts = KartsPresent;
+                                missingWait = 0f;
+                            }
+                        }
                         break;
                     }
+                    missingWait = 0f;
 
                     // Everyone is here. Start once every camera is ready (or the wait times out).
                     cameraWait += Runner.DeltaTime;

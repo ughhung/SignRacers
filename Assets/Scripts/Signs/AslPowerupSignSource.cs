@@ -49,6 +49,7 @@ namespace SignRacers.Signs
         private AslRecognizer recognizer;
         private bool setupDone;
         private bool warnedNoRecognizer;
+        private bool awaitingAnswer;
         private float windowEndsAt;
         private float nextBoostAllowedAt;
         private float lockUntil;
@@ -94,7 +95,7 @@ namespace SignRacers.Signs
         /// <summary>Check right now instead of waiting for the signing window to end.</summary>
         public void CheckNow()
         {
-            if (IsSigning) RecognizeNow();
+            if (IsSigning && !awaitingAnswer) RecognizeNow();
         }
 
         private void BeginAttempt(PowerupAction action, int slot)
@@ -146,7 +147,7 @@ namespace SignRacers.Signs
                 }
             }
 
-            if (IsSigning && Time.time >= windowEndsAt) RecognizeNow();
+            if (IsSigning && !awaitingAnswer && Time.time >= windowEndsAt) RecognizeNow();
         }
 
         private void Setup()
@@ -175,8 +176,15 @@ namespace SignRacers.Signs
                 return;
             }
 
-            AslResult result = recognizer.Recognize();
-            Finish(result.HasLabel ? result.Label : null);
+            // The toolkit answers a few frames later. Wait for it, and don't ask twice.
+            if (awaitingAnswer) return;
+            awaitingAnswer = true;
+            recognizer.Recognize(result =>
+            {
+                awaitingAnswer = false;
+                if (this == null || !IsSigning) return; // destroyed, or already finished another way
+                Finish(result.HasLabel ? result.Label : null);
+            });
         }
 
         private void Finish(string answer)

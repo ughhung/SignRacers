@@ -40,13 +40,14 @@ namespace SignRacers.UI
             }
             if (!loading) return;
 
+            bool online = GameSession.Mode == SessionMode.Multiplayer;
             int dots = (int)(Time.unscaledTime * 2f) % 4;
             string word = leaving ? "Leaving"
-                        : race == null && GameSession.Mode == SessionMode.Multiplayer ? "Connecting"
+                        : race == null && online ? (GameSession.IsPublic ? "Finding a game" : "Connecting")
                         : "Loading";
             string status = word + new string('.', dots);
             string detail = leaving ? ""
-                          : race == null ? (GameSession.Mode == SessionMode.Multiplayer ? "Room " + GameSession.RoomCode : "")
+                          : race == null ? (online && !GameSession.IsPublic ? "Room " + GameSession.RoomCode : "")
                           : "Loading the track";
 
             if (statusText != null && status != lastStatus) { statusText.text = status; lastStatus = status; }

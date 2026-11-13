@@ -1,13 +1,11 @@
 using System;
-using System.Linq;
-using GTk.Bindings;
+using Gtk.Unity;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace SignRacers.Signs
 {
     /// <summary>The outcome of one recognition: best label, its score, and how far ahead
-    /// of the runner-up it was (a small margin means the model was unsure).</summary>
+    /// of the runner-up it was. The new toolkit only reports the best sign and its score, so Margin is always 0.</summary>
     public readonly struct AslResult
     {
         public readonly string Label;
@@ -26,65 +24,52 @@ namespace SignRacers.Signs
     }
 
     /// <summary>
-    /// The game's own copy of the sign-recognition setup, adapted from the toolkit's
-    /// InteractiveSLRSample (which stays untouched). Use THIS INSTEAD OF that sample, never
-    /// alongside it in the same scene, because both would try to open the camera pipeline.
+    /// The game's recognizer, backed by the SLRGTk toolkit's SignRecognizer (the component that is also the camera view).
     ///
-    /// The toolkit recognizes ON DEMAND, not continuously:
-    ///   BeginCapture() -> clears the frame buffer; the player signs
-    ///   Recognize()    -> classifies everything captured since, returns the top match
-    /// A sign clip is about 2 seconds, so keep the capture window around that long.
-    /// Recognize() always returns the closest word in the vocabulary, even when nobody
-    /// signed anything, so callers must judge Score / Margin / IsHandPresent themselves.
+    /// The toolkit answers ASYNCHRONOUSLY: Trigger() sends a request and the answer arrives on a later frame through the
+    /// Recognized event. So Recognize(callback) asks, and calls the callback with the result (or None after a timeout).
+    ///   BeginCapture()          -> forget what the camera saw before now
+    ///   Recognize(done)         -> classify what was captured; done(result) is called a few frames later
+    ///
+    /// Setup: add GameObject > UI > SLRGTk > Sign Recognizer, UNTICK its "Tap To Trigger" (the game decides when to check),
+    /// then put this component on the ASL object and drag the Sign Recognizer into the slot.
     /// </summary>
     public class AslRecognizer : MonoBehaviour
     {
-        [Header("Preview")]
-        [Tooltip("Where the camera preview is shown. Required.")]
-        [SerializeField] private RawImage previewImage;
+        [Tooltip("The toolkit's Sign Recognizer. Leave empty to find the one in the scene.")]
+        [SerializeField] private SignRecognizer recognizer;
 
-        [Tooltip("Auto decides from the graphics API. Override only if Auto is wrong on this device.")]
-        [SerializeField] private SLRTk.SlrtkPreviewOrientation.FlipOverride forceFlipPreview =
-            SLRTk.SlrtkPreviewOrientation.FlipOverride.Auto;
+        [Tooltip("The toolkit has no 'ready' flag, so the camera counts as ready this long after it is enabled.")]
+        [SerializeField] private float warmupSeconds = 2f;
 
-        [Tooltip("Mirror the preview like a selfie camera. Display only, never affects results.")]
-        [SerializeField] private bool mirrorPreview = true;
+        [Tooltip("How long to wait for the toolkit's answer before giving up (the result is then 'nothing').")]
+        [SerializeField] private float answerTimeoutSeconds = 3f;
 
-        [Header("Recognition")]
-        [Tooltip("Which gallery backs recognition. Naming it is load-bearing, see SetupPipeline.")]
-        [SerializeField] private string gallery = "popsign";
-        [SerializeField] private int topK = 5;
+        // The signs recognition is limited to, until the game calls SetVocabulary().
+        [NonSerialized] private string[] signs = { "yellow", "red", "owl", "dad", "elephant" };
 
-        [Header("Overlay (turn off to save performance)")]
-        [SerializeField] private bool enableOverlay = true;
-        [SerializeField] private bool drawPose = true;
-
-        // The signs recognition is limited to. Not shown in the Inspector: this starting list is only used
-        // until the game calls SetVocabulary() with the player's picked words.
-        [System.NonSerialized] private string[] signs = { "yellow", "red", "owl", "dad", "elephant" };
-
-        // The pipeline and its texture live for the whole app, not for one scene.
-        // Closing and reopening the pipeline (or rebinding a fresh texture) is not a cycle
-        // the native side survives, and the camera takes seconds to warm up each time. So:
-        // open once, keep the same texture bound for the app's life, and only manage
-        // RECORDING around scene changes and app pauses.
-        private static DynamicSLRPipelineService pipeline;
-        private static RenderTexture dynamicSlrTexture;
-        private static bool recording;
-        private static bool quitHooked;
-
+        private Action<AslResult> pendingDone;
+        private float pendingStart;
+        private float enabledAt = -1f;
         private float lastClearTime = -1f;
 
-        /// <summary>True once the camera pipeline is open and recognition can run.</summary>
-        public bool IsReady => pipeline != null;
+        /// <summary>The Sign Recognizer view, so the HUD can place or show it.</summary>
+        public SignRecognizer View => recognizer;
 
-        /// <summary>Is a hand (together with its same-side shoulder) in frame right now?</summary>
-        public bool IsHandPresent => pipeline != null && pipeline.IsHandPresent().Present;
+        /// <summary>True once the camera has had time to start and recognition can run.</summary>
+        public bool IsReady => recognizer != null && recognizer.isActiveAndEnabled &&
+                               enabledAt >= 0f && Time.realtimeSinceStartup - enabledAt >= warmupSeconds;
+
+        /// <summary>Is a hand in frame right now?</summary>
+        public bool IsHandPresent => recognizer != null && recognizer.HandPresent;
+
+        /// <summary>True while a Recognize() request is waiting for its answer.</summary>
+        public bool IsRecognizing => pendingDone != null;
 
         /// <summary>Seconds since the capture window opened (last BeginCapture or recognition), or -1.</summary>
         public float CaptureSeconds => lastClearTime < 0f ? -1f : Time.realtimeSinceStartup - lastClearTime;
 
-        /// <summary>How long the last Recognize() call blocked the main thread.</summary>
+        /// <summary>How long the last Recognize() took from asking to the answer arriving. It does NOT block the game.</summary>
         public float LastRecognitionMs { get; private set; }
 
         // ---- Public API ----
@@ -93,240 +78,124 @@ namespace SignRacers.Signs
         public void SetVocabulary(string[] newSigns)
         {
             signs = newSigns;
-            UpdateVocab();
+            ApplyFocus();
         }
 
-        /// <summary>Open a fresh capture window: drop whatever the camera saw before now.</summary>
+        /// <summary>Open a fresh capture window: forget whatever the camera saw before now.</summary>
         public void BeginCapture()
         {
-            if (pipeline == null) return;
-            pipeline.ClearBuffer(new DynamicSLREmpty());
+            if (recognizer == null) return;
+            recognizer.Clear();
             lastClearTime = Time.realtimeSinceStartup;
         }
 
         /// <summary>
-        /// Classify the current capture window. BLOCKS the main thread while it runs
-        /// (see LastRecognitionMs). The buffer is cleared afterwards, so the next window
-        /// starts clean. Returns AslResult.None if the pipeline isn't ready or nothing matched.
+        /// Classify the current capture window. done(result) is called on a later frame with the answer, or with
+        /// AslResult.None if nothing was recognized or the toolkit didn't answer in time. Returns false (and never calls
+        /// done) if a previous request is still waiting.
         /// </summary>
-        public AslResult Recognize()
+        public bool Recognize(Action<AslResult> done)
         {
-            if (pipeline == null)
+            if (done == null) return false;
+            if (recognizer == null)
             {
-                Debug.LogWarning("[ASL] Recognize ignored: the pipeline isn't ready yet.");
-                return AslResult.None;
+                Debug.LogWarning("[ASL] Recognize ignored: no SignRecognizer.");
+                done(AslResult.None);
+                return true;
+            }
+            if (pendingDone != null)
+            {
+                Debug.LogWarning("[ASL] Recognize ignored: the previous request is still waiting for its answer.");
+                return false;
             }
 
-            var timer = System.Diagnostics.Stopwatch.StartNew();
-            DynamicSLRRecognitionResponse response = pipeline.TriggerRecognition(new DynamicSLREmpty());
-
-            try
-            {
-                if (response == null || !response.Success)
-                {
-                    Debug.LogError($"[ASL] Recognition failed: {(response?.ErrorMessage ?? "null response")}");
-                    return AslResult.None;
-                }
-                if (response.Classifications.Count == 0) return AslResult.None;
-
-                var ranked = response.Classifications.OrderByDescending(c => c.Score).ToList();
-                float margin = ranked.Count > 1 ? ranked[0].Score - ranked[1].Score : 0f;
-                return new AslResult(ranked[0].Label, ranked[0].Score, margin);
-            }
-            finally
-            {
-                // Always clear, even on the early returns, so a failed or empty recognition
-                // never leaves the previous clip's frames in the buffer.
-                pipeline.ClearBuffer(new DynamicSLREmpty());
-                lastClearTime = Time.realtimeSinceStartup;
-                timer.Stop();
-                LastRecognitionMs = (float)timer.Elapsed.TotalMilliseconds;
-            }
+            pendingDone = done;
+            pendingStart = Time.realtimeSinceStartup;
+            recognizer.Trigger();
+            return true;
         }
 
-        // ---- Setup and lifecycle (adapted from the toolkit sample) ----
+        // ---- Setup ----
 
-        private void Start()
+        private void Awake()
         {
-            if (previewImage == null)
-            {
-                Debug.LogError("[ASL] Please assign a RawImage to display the camera preview.");
-                return;
-            }
-
-            // Wait for GPU initialization before starting.
-            NativePipelineHooks.OnGpuInitialized += SetupPipeline;
+            if (recognizer == null) recognizer = FindFirstObjectByType<SignRecognizer>();
+            if (recognizer == null) Debug.LogError("[ASL] No SignRecognizer in the scene. Add one with GameObject > UI > SLRGTk > Sign Recognizer.");
         }
 
         private void OnEnable()
         {
-            // Null until the GPU callback has run; SetupPipeline handles the first time.
-            if (pipeline == null) return;
-            AttachPreview();
-            ResumeRecording();
-            UpdateVocab();
+            enabledAt = Time.realtimeSinceStartup;
+            if (recognizer == null) return;
+            recognizer.Recognized.AddListener(OnRecognized);
+            ApplyFocus();
         }
 
-        private void OnDisable() => SuspendRecording("component disabled");
-
-        private void OnApplicationPause(bool paused)
+        private void OnDisable()
         {
-            // Don't hold the camera while the app is backgrounded.
-            if (paused) SuspendRecording("app paused");
-            else { AttachPreview(); ResumeRecording(); }
+            if (recognizer != null) recognizer.Recognized.RemoveListener(OnRecognized);
+            Complete(AslResult.None); // never leave a caller waiting forever
         }
 
-        private void OnDestroy()
+        private void Start()
         {
-            // Deliberately does NOT close the pipeline or release the texture. OnDestroy
-            // runs on every scene change, and closing here left the preview black on every
-            // camera scene after the first. Real teardown happens at app quit.
-            NativePipelineHooks.OnGpuInitialized -= SetupPipeline;
+            ApplyFocus();
         }
 
-        private void SetupPipeline()
+        private void Update()
         {
+            if (pendingDone != null && Time.realtimeSinceStartup - pendingStart > answerTimeoutSeconds)
+            {
+                Debug.LogWarning("[ASL] The toolkit didn't answer in time; counting it as nothing.");
+                if (recognizer != null) recognizer.Clear();
+                Complete(AslResult.None);
+            }
+        }
+
+        // The toolkit calls this on the main thread, a frame or so after Trigger().
+        private void OnRecognized(string label, float score)
+        {
+            if (pendingDone == null) return; // not ours (for example a tap while Tap To Trigger is on)
+
+            AslResult result = string.IsNullOrEmpty(label) || label == SignRecognition.NoSign
+                ? AslResult.None
+                : new AslResult(StripGallery(label), score, 0f);
+
+            // Start the next window clean.
+            if (recognizer != null) recognizer.Clear();
+            lastClearTime = Time.realtimeSinceStartup;
+            Complete(result);
+        }
+
+        private void Complete(AslResult result)
+        {
+            Action<AslResult> done = pendingDone;
+            if (done == null) return;
+            pendingDone = null; // first, so the callback may ask again
+            LastRecognitionMs = (Time.realtimeSinceStartup - pendingStart) * 1000f;
+            done(result);
+        }
+
+        private void ApplyFocus()
+        {
+            if (recognizer == null || signs == null || signs.Length == 0) return;
             try
             {
-                if (pipeline != null)
-                {
-                    // Already open from an earlier scene: reattach and resume, never reopen.
-                    AttachPreview();
-                    ResumeRecording();
-                    UpdateVocab();
-                    return;
-                }
-
-                HookQuit();
-
-                // DontUnloadUnusedAsset because only a static field references this texture,
-                // and a scene transition would otherwise be free to unload it out from under
-                // the bound native pointer.
-                dynamicSlrTexture = new RenderTexture(1280, 720, 0, RenderTextureFormat.BGRA32);
-                dynamicSlrTexture.enableRandomWrite = true;
-                dynamicSlrTexture.hideFlags = HideFlags.DontUnloadUnusedAsset;
-                dynamicSlrTexture.Create();
-                AttachPreview();
-
-                pipeline = new DynamicSLRPipelineService();
-
-                // Open explicitly BEFORE binding the texture: this is the only place the
-                // options reach the graph builder. Naming the gallery is load-bearing,
-                // because the other recognition fields are proto defaults that serialise to
-                // zero bytes and would silently build the legacy recogniser instead.
-                var baseOptions = new CoreTk.Pipeline.PipelineBaseOptions
-                {
-                    EnableHdf5 = false,
-                    EnableOverlay = enableOverlay,
-                    Overlay = new CoreTk.Pipeline.OverlayOptions { DrawPose = drawPose },
-                    SignRecognition = new CoreTk.Pipeline.SignRecognitionOptions
-                    {
-                        Modality = CoreTk.Pipeline.SignRecognitionOptions.Types.Modality.Isolated,
-                        Language = CoreTk.Pipeline.SignRecognitionOptions.Types.Language.Asl,
-                        Gallery = gallery,
-                        TopK = topK,
-                    },
-                };
-                var openResp = pipeline.OpenPipeline(new DynamicSLROpenRequest { Options = baseOptions });
-                if (openResp != null && !openResp.Success)
-                {
-                    Debug.LogError("[ASL] OpenPipeline failed: " + openResp.ErrorMessage);
-                    pipeline = null;
-                    return;
-                }
-
-                IntPtr nativePtr = dynamicSlrTexture.GetNativeTexturePtr();
-                pipeline.AddDynamicSLR(new AddDynamicSLRRequest
-                {
-                    TargetGraph = "GTk/Pipelines/DynamicSLR",
-                    TexturePtr = (ulong)nativePtr.ToInt64(),
-                    ViewPtr = 0,
-                    // A GL texture name carries no dimensions, so without these the native
-                    // viewport falls back to the camera's size and crops (Android/GL only).
-                    TextureWidth = (uint)dynamicSlrTexture.width,
-                    TextureHeight = (uint)dynamicSlrTexture.height,
-                });
-
-                ResumeRecording();
-                UpdateVocab();
-                Debug.Log("[ASL] Pipeline started.");
+                // With ONE gallery active, plain words work. With several, the toolkit needs "gallery:word"
+                // and throws otherwise, so leave only popsign ticked on the Sign Recognizer.
+                recognizer.Focus(signs);
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-                Debug.LogError($"[ASL] Failed to start pipeline: {ex.Message}\n{ex.StackTrace}");
+                Debug.LogError("[ASL] Focus rejected the sign list: " + ex.Message);
             }
         }
 
-        /// <summary>Point this scene's RawImage at the shared texture. Runs on every
-        /// activation, because the component can be re-enabled or replaced by a scene reload.</summary>
-        private void AttachPreview()
+        /// <summary>Labels may come back as "popsign:owl". The game only wants "owl".</summary>
+        private static string StripGallery(string label)
         {
-            if (previewImage == null || dynamicSlrTexture == null) return;
-            previewImage.texture = dynamicSlrTexture;
-
-            var uv = SLRTk.SlrtkPreviewOrientation.UvRect(forceFlipPreview);
-
-            // Mirror like a bathroom mirror, not a photo: copying a sign is disorienting if
-            // raising a hand moves the opposite side of the screen. Display only.
-            if (mirrorPreview) uv = new Rect(uv.x + uv.width, uv.y, -uv.width, uv.height);
-
-            // No aspect crop on purpose: a crop computed from rectTransform.rect doesn't
-            // match the panel's real size during gameplay and stretches a narrow sliver.
-            previewImage.uvRect = uv;
-        }
-
-        private void ResumeRecording()
-        {
-            if (pipeline == null || recording) return;
-            // Empty string, not null: the field is null-checked and null would throw.
-            pipeline.StartRecording(new DynamicSLRStartRequest { OutputHdf5File = "" });
-            // Clear so frames from before a pause can't bleed into the next recognition.
-            pipeline.ClearBuffer(new DynamicSLREmpty());
-            lastClearTime = Time.realtimeSinceStartup;
-            recording = true;
-        }
-
-        private void SuspendRecording(string why)
-        {
-            if (pipeline == null || !recording) return;
-            pipeline.StopRecording(new DynamicSLREmpty());
-            pipeline.ClearBuffer(new DynamicSLREmpty());
-            recording = false;
-        }
-
-        private void UpdateVocab()
-        {
-            if (pipeline == null || signs == null) return;
-            var request = new DynamicSLRSetVocabRequest();
-            foreach (string sign in signs) request.Vocab.Add(sign);
-            pipeline.SetVocabulary(request);
-        }
-
-        private static void HookQuit()
-        {
-            if (quitHooked) return;
-            Application.quitting += CloseForGood;
-            quitHooked = true;
-        }
-
-        /// <summary>Full teardown, once, when the app itself is going away.</summary>
-        private static void CloseForGood()
-        {
-            if (pipeline != null && recording)
-            {
-                pipeline.StopRecording(new DynamicSLREmpty());
-                recording = false;
-            }
-            if (pipeline != null)
-            {
-                pipeline.Dispose();
-                pipeline = null;
-            }
-            if (dynamicSlrTexture != null)
-            {
-                dynamicSlrTexture.Release();
-                dynamicSlrTexture = null;
-            }
+            int colon = label.IndexOf(':');
+            return colon >= 0 ? label.Substring(colon + 1) : label;
         }
     }
 }

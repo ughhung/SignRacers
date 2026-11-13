@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Fusion;
 using SignRacers.Kart;
 using SignRacers.Track;
@@ -12,9 +14,11 @@ namespace SignRacers.Core
     /// Put this on an empty GameObject in the scene (it adds the NetworkRunner itself).
     ///   Single = offline practice (no Photon connection, no CCU used)
     ///   Shared = online: every device owns its own kart, Photon Cloud relays everything
-    /// When launched from the menu, the menu's choice decides the mode. An online room uses
+    /// When launched from the menu, the menu's choice decides the mode. A private online room uses
     /// its room code as the Photon session name. Creating a room may make a new session;
     /// joining one may not, so a mistyped code fails instead of making an empty room.
+    /// Quick Play uses NO session name: Fusion joins any open Quick Play room (tag kind = quick), or creates one.
+    /// A host can make their code room public; it is tagged kind = hosted and appears in the menu's Browse list, never in Quick Play.
     /// </summary>
     public class GameBootstrap : SimulationBehaviour, IPlayerJoined
     {
@@ -51,6 +55,7 @@ namespace SignRacers.Core
             IsLeaving = false;
             bool fromMenu = GameSession.StartedFromMenu;
             bool onlineFromMenu = fromMenu && GameSession.Mode == SessionMode.Multiplayer;
+            bool publicRoom = onlineFromMenu && GameSession.IsPublic;
 
             // When launched from the menu, the menu's choice wins over the inspector.
             if (fromMenu) gameMode = onlineFromMenu ? GameMode.Shared : GameMode.Single;
@@ -69,16 +74,31 @@ namespace SignRacers.Core
             var args = new StartGameArgs
             {
                 GameMode = gameMode,
-                SessionName = onlineFromMenu ? GameSession.RoomCode : sessionName,
+                SessionName = publicRoom ? null : onlineFromMenu ? GameSession.RoomCode : sessionName,
                 SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>(),
             };
 
             if (onlineFromMenu)
             {
                 args.PlayerCount = GameSession.MaxPlayers;
-                args.IsVisible = false; // private: reachable only by its code
-                args.IsOpen = true;
-                args.EnableClientSessionCreation = GameSession.IsCreatingRoom;
+                if (publicRoom)
+                {
+                    // Quick Play: no name, so Fusion joins any open public room or creates one (its default matchmaking fills the oldest room first).
+                    args.IsVisible = true;
+                    args.IsOpen = true;
+                    args.EnableClientSessionCreation = true;
+                    // Tagged, so Quick Play only matches other Quick Play rooms, never a host's room.
+                    args.SessionProperties = new Dictionary<string, SessionProperty> { [GameSession.KindKey] = GameSession.KindQuick };
+                }
+                else
+                {
+                    args.IsVisible = false; // private: reachable only by its code
+                    args.IsOpen = true;
+                    args.EnableClientSessionCreation = GameSession.IsCreatingRoom;
+                    // A host's room can later be made visible in the Browse list (kind = hosted). Joiners just use the code or the list.
+                    if (GameSession.IsCreatingRoom)
+                        args.SessionProperties = new Dictionary<string, SessionProperty> { [GameSession.KindKey] = GameSession.KindHosted };
+                }
             }
 
             var result = await runner.StartGame(args);
@@ -94,12 +114,17 @@ namespace SignRacers.Core
             }
             else
             {
-                Debug.Log($"[Bootstrap] Fusion started in {gameMode} mode.");
+                Debug.Log($"[Bootstrap] Fusion started in {gameMode} mode" + (publicRoom ? " (public room)." : "."));
             }
         }
 
         /// <summary>Leave the session cleanly and go back to the main menu.</summary>
-        public async void ReturnToMenu()
+        public void ReturnToMenu() => Leave(menuSceneName);
+
+        /// <summary>Quick Play: leave this (closed) room and reload the race scene, which joins a fresh public room.</summary>
+        public void FindNewGame() => Leave(SceneManager.GetActiveScene().name);
+
+        private async void Leave(string sceneToLoad)
         {
             if (leaving) return;
             leaving = true;
@@ -107,14 +132,19 @@ namespace SignRacers.Core
 
             try
             {
-                if (runner != null) await runner.Shutdown(false); // false: keep this object, the scene load removes it
+                if (runner != null)
+                {
+                    // false: keep this object, the scene load removes it. If Photon is slow to answer, don't leave the player stuck: go after 3 seconds anyway.
+                    var shutdown = runner.Shutdown(false);
+                    await Task.WhenAny(shutdown, Task.Delay(3000));
+                }
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"[Bootstrap] Shutdown reported: {ex.Message}");
             }
 
-            SceneManager.LoadScene(menuSceneName);
+            SceneManager.LoadScene(sceneToLoad);
         }
 
         private static string Describe(ShutdownReason reason)

@@ -9,8 +9,10 @@ namespace SignRacers.UI
 {
     /// <summary>
     /// The end-of-race screen, on its own prefab (RaceResultsCanvas) so it can show after the
-    /// race HUD hides. Appears once your kart finishes: your place, everyone's finish time,
-    /// and RACE AGAIN (host only, once everyone is done) and MENU buttons.
+    /// race HUD hides. Appears once your kart finishes: your place, everyone's finish time (with their names),
+    /// and the buttons:
+    ///   Code room: RACE AGAIN (host only, once everyone is done) and MENU.
+    ///   Quick Play room: NEW GAME (everyone, once everyone is done: leaves the closed room and joins a fresh public one) and MENU.
     /// </summary>
     public class ResultsHud : MonoBehaviour
     {
@@ -27,14 +29,27 @@ namespace SignRacers.UI
         [SerializeField] private Button menuButton;
 
         private KartPathFollower kart;
+        private TMP_Text againLabel;
 
         private void Awake()
         {
             RaceHudView.EnsureEventSystem();
+            if (againButton != null) againLabel = againButton.GetComponentInChildren<TMP_Text>(true);
             if (againButton != null) againButton.onClick.AddListener(() =>
             {
                 var race = RaceManager.Instance;
-                if (race != null && race.State == RaceState.Finished && race.HasStateAuthority) race.Restart();
+                if (race == null || race.State != RaceState.Finished) return;
+
+                if (race.IsPublicRoom)
+                {
+                    // Quick Play: the room is closed, so everyone goes and finds a new game.
+                    var bootstrap = FindFirstObjectByType<GameBootstrap>();
+                    if (bootstrap != null) bootstrap.FindNewGame();
+                }
+                else if (race.HasStateAuthority)
+                {
+                    race.Restart();
+                }
             });
             if (menuButton != null) menuButton.onClick.AddListener(() =>
             {
@@ -79,25 +94,43 @@ namespace SignRacers.UI
                 if (!has) continue;
 
                 var k = standings[i];
-                string who = k == kart ? "You" : k.IsBot ? k.BotName : "Player";
-                Color color = k == kart ? GoldColor : Color.white;
-                if (nameTexts[i] != null) { nameTexts[i].text = $"{i + 1}.  {who}"; nameTexts[i].color = color; }
+                bool me = k == kart;
+                var skin = UiSkin.Resolve();
+                Color color = me ? Color.white : skin.textColor; // white on your blue row, dark on the grey rows
+                var rowImage = rows[i] != null ? rows[i].GetComponent<Image>() : null;
+                if (rowImage != null)
+                {
+                    Sprite sprite = me && skin.rowChosen != null ? skin.rowChosen : skin.row;
+                    if (sprite != null && rowImage.sprite != sprite) rowImage.sprite = sprite;
+                    rowImage.color = me ? skin.RowChosenColor : skin.RowColor;
+                }
+                if (nameTexts[i] != null) { nameTexts[i].text = $"{i + 1}.  {NameOf(k)}"; nameTexts[i].color = color; }
                 if (timeTexts[i] != null) { timeTexts[i].text = k.IsFinished ? FormatTime(k.FinishTime) : "racing..."; timeTexts[i].color = color; }
             }
 
-            bool canRestart = everyoneDone && race.HasStateAuthority;
-            if (againButton != null) againButton.gameObject.SetActive(canRestart);
+            bool publicRoom = race.IsPublicRoom;
+            bool canAgain = everyoneDone && (publicRoom || race.HasStateAuthority);
+            if (againButton != null) againButton.gameObject.SetActive(canAgain);
+            if (againLabel != null) againLabel.text = publicRoom ? "NEW GAME" : "RACE AGAIN";
             if (menuButton != null)
             {
                 // MENU sits in the middle when it is the only button.
                 var rect = (RectTransform)menuButton.transform;
-                rect.anchoredPosition = new Vector2(canRestart ? 215f : 0f, rect.anchoredPosition.y);
+                rect.anchoredPosition = new Vector2(canAgain ? 215f : 0f, rect.anchoredPosition.y);
             }
 
             if (statusText != null)
                 statusText.text = !everyoneDone ? "waiting for the others to finish..."
-                                : !race.HasStateAuthority ? "waiting for the host to restart..."
+                                : !publicRoom && !race.HasStateAuthority ? "waiting for the host to restart..."
                                 : "";
+        }
+
+        private static string NameOf(KartPathFollower k)
+        {
+            if (k.HasStateAuthority && !k.IsBot) return "You";
+            if (k.IsBot) return k.BotName;
+            string name = k.Object != null && k.Object.IsValid ? PlayerVote.NameOf(k.Object.InputAuthority) : "";
+            return string.IsNullOrEmpty(name) ? "Player" : name;
         }
 
         private static string Ordinal(int n)

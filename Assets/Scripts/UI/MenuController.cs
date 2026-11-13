@@ -10,7 +10,7 @@ namespace SignRacers.UI
 {
     /// <summary>
     /// The main menu: Home (Solo / Multiplayer), the Solo word picker, and the Multiplayer
-    /// screens (Create game / Join game with a room code).
+    /// screens (Quick play / Create game / Join game with a room code).
     /// The screens themselves are ordinary Unity UI objects (built by the editor tool
     /// "Sign Racers > Build Main Menu Scene"), so restyle them in the editor. This script
     /// only fills in the word buttons and reacts to taps.
@@ -26,13 +26,20 @@ namespace SignRacers.UI
         [SerializeField] private GameObject pickerPanel;
         [SerializeField] private GameObject multiplayerPanel;
         [SerializeField] private GameObject joinPanel;
+        [Tooltip("Optional. The Browse public games screen.")]
+        [SerializeField] private GameObject browsePanel;
 
         [Header("Home")]
+        [Tooltip("Optional. Shows your name (for example Blue Fox). Tap it to get a new one. Add it with Sign Racers > Add Player Name To Menu.")]
+        [SerializeField] private Button nameButton;
         [SerializeField] private Button soloButton;
         [SerializeField] private Button multiplayerButton;
 
         [Header("Word picker")]
+        [Tooltip("Optional. Not needed now that the tray shows your picks.")]
         [SerializeField] private TMP_Text counterText;
+        [Tooltip("Optional. The filter chips under the search box. The first one is 'All'; the others are named after a category in SignCategories.txt.")]
+        [SerializeField] private Button[] filterChips;
         [SerializeField] private TMP_InputField searchField;
         [SerializeField] private RectTransform listContent;
         [Tooltip("A hidden button that is copied once per word.")]
@@ -40,10 +47,16 @@ namespace SignRacers.UI
         [SerializeField] private Button randomButton;
         [SerializeField] private Button startButton;
         [SerializeField] private Button backButton;
-        [SerializeField] private Color normalColor = new Color(0.20f, 0.24f, 0.36f);
-        [SerializeField] private Color selectedColor = new Color(0.25f, 0.70f, 0.40f);
+        [Tooltip("Optional. The row of 5 slots above the list that shows your picks. Tap a filled slot to remove that word.")]
+        [SerializeField] private Button[] traySlots;
+        [SerializeField] private Color normalColor = new Color(0.30f, 0.30f, 0.30f);
+        [SerializeField] private Color selectedColor = new Color(0.55f, 0.55f, 0.55f);
 
         [Header("Multiplayer")]
+        [Tooltip("Optional. Joins any open public room (or starts one). Add it with Sign Racers > Add Quick Play Button To Menu.")]
+        [SerializeField] private Button quickPlayButton;
+        [Tooltip("Optional. Opens the list of public rooms hosts have made. Add it with Sign Racers > Add Browse Games Screen To Menu.")]
+        [SerializeField] private Button browseButton;
         [SerializeField] private Button createButton;
         [SerializeField] private Button joinButton;
         [SerializeField] private Button multiplayerBackButton;
@@ -54,9 +67,14 @@ namespace SignRacers.UI
         [SerializeField] private Button joinBackButton;
         [SerializeField] private TMP_Text joinErrorText;
 
+        [Header("Browse")]
+        [SerializeField] private PublicGameBrowser browser;
+        [SerializeField] private Button browseBackButton;
+
         private List<string> allSigns = new List<string>();
         private readonly List<string> selected = new List<string>();
         private readonly Dictionary<string, Button> wordButtons = new Dictionary<string, Button>();
+        private readonly Dictionary<string, Sprite> normalSprites = new Dictionary<string, Sprite>();
 
         private int Required => Mathf.Min(GameSession.SignsPerGame, allSigns.Count);
 
@@ -65,14 +83,14 @@ namespace SignRacers.UI
             allSigns = SignLibrary.Load();
             BuildWordList();
 
-            // Start with the last picks selected, if those words still exist.
-            foreach (string word in GameSession.LoadLastPicks())
-            {
-                if (wordButtons.ContainsKey(word) && !selected.Contains(word) && selected.Count < Required)
-                    selected.Add(word);
-            }
+            // The picker always starts empty (0 picked); last picks are not restored.
 
             // Home
+            if (nameButton != null)
+            {
+                RefreshName();
+                nameButton.onClick.AddListener(() => { PlayerNames.Roll(); RefreshName(); });
+            }
             soloButton.onClick.AddListener(() => Show(pickerPanel));
             multiplayerButton.onClick.AddListener(() => Show(multiplayerPanel));
 
@@ -80,9 +98,14 @@ namespace SignRacers.UI
             backButton.onClick.AddListener(() => Show(homePanel));
             randomButton.onClick.AddListener(FillRandom);
             startButton.onClick.AddListener(StartSolo);
-            searchField.onValueChanged.AddListener(ApplyFilter);
+            searchField.onValueChanged.AddListener(_ => ApplyFilter());
+            SetupChips();
 
             // Multiplayer
+            if (quickPlayButton != null) quickPlayButton.onClick.AddListener(QuickPlay);
+            if (browseButton != null) browseButton.onClick.AddListener(() => Show(browsePanel));
+            if (browseBackButton != null) browseBackButton.onClick.AddListener(() => Show(multiplayerPanel));
+            if (browser != null) browser.JoinRequested += OnBrowseJoin;
             createButton.onClick.AddListener(CreateRoom);
             joinButton.onClick.AddListener(() => { ClearJoinForm(); Show(joinPanel); });
             multiplayerBackButton.onClick.AddListener(() => Show(homePanel));
@@ -105,12 +128,19 @@ namespace SignRacers.UI
             }
         }
 
+        private void RefreshName()
+        {
+            var label = nameButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null) label.text = PlayerNames.Get() + "  (tap to change)";
+        }
+
         private void Show(GameObject panel)
         {
             homePanel.SetActive(panel == homePanel);
             pickerPanel.SetActive(panel == pickerPanel);
             multiplayerPanel.SetActive(panel == multiplayerPanel);
             joinPanel.SetActive(panel == joinPanel);
+            if (browsePanel != null) browsePanel.SetActive(panel == browsePanel);
         }
 
         // ---------------- Solo word picker ----------------
@@ -131,6 +161,7 @@ namespace SignRacers.UI
                 string captured = word;
                 button.onClick.AddListener(() => Toggle(captured));
                 wordButtons[word] = button;
+                if (button.targetGraphic is Image image) normalSprites[word] = image.sprite;
             }
         }
 
@@ -153,26 +184,115 @@ namespace SignRacers.UI
             Refresh();
         }
 
-        private void ApplyFilter(string query)
+        private string activeCategory = ""; // "" = All
+
+        private void SetupChips()
         {
-            query = query.Trim().ToLowerInvariant();
+            if (filterChips == null) return;
+            for (int i = 0; i < filterChips.Length; i++)
+            {
+                var chip = filterChips[i];
+                if (chip == null) continue;
+                string category = i == 0 ? "" : chip.GetComponentInChildren<TMP_Text>(true).text;
+                chip.onClick.AddListener(() => { activeCategory = category; RefreshChips(); ApplyFilter(); });
+            }
+            RefreshChips();
+        }
+
+        private void RefreshChips()
+        {
+            if (filterChips == null) return;
+            var skin = UiSkin.Resolve();
+            for (int i = 0; i < filterChips.Length; i++)
+            {
+                var chip = filterChips[i];
+                if (chip == null) continue;
+                string category = i == 0 ? "" : chip.GetComponentInChildren<TMP_Text>(true).text;
+                bool on = category == activeCategory;
+                var image = chip.targetGraphic as Image;
+                if (image != null)
+                {
+                    if (on && skin.rowChosen != null) image.sprite = skin.rowChosen;
+                    else if (!on && skin.row != null) image.sprite = skin.row;
+                    image.color = on ? skin.RowChosenColor : skin.RowColor;
+                }
+                var label = chip.GetComponentInChildren<TMP_Text>(true);
+                if (label != null) label.color = on ? Color.white : skin.textColor;
+            }
+        }
+
+        /// <summary>Shows only the words that match the search text AND the chosen category chip.</summary>
+        private void ApplyFilter()
+        {
+            string query = searchField.text.Trim().ToLowerInvariant();
             foreach (var pair in wordButtons)
-                pair.Value.gameObject.SetActive(query.Length == 0 || pair.Key.Contains(query));
+            {
+                bool matchesText = query.Length == 0 || pair.Key.Contains(query);
+                bool matchesCategory = activeCategory.Length == 0 || SignCategories.Of(pair.Key) == activeCategory;
+                pair.Value.gameObject.SetActive(matchesText && matchesCategory);
+            }
         }
 
         private void Refresh()
         {
+            var skin = UiSkin.Resolve();
             foreach (var pair in wordButtons)
-                pair.Value.targetGraphic.color = selected.Contains(pair.Key) ? selectedColor : normalColor;
+            {
+                bool chosen = selected.Contains(pair.Key);
+                var image = pair.Value.targetGraphic as Image;
+                if (image != null && skin.rowChosen != null)
+                {
+                    // Styled picker (Kenney skin): a picked word swaps to the blue row, like the voting screen.
+                    if (chosen) image.sprite = skin.rowChosen;
+                    else if (normalSprites.TryGetValue(pair.Key, out var normal)) image.sprite = normal;
+                    image.color = chosen ? skin.RowChosenColor : skin.RowColor;
+                    var rowLabel = pair.Value.GetComponentInChildren<TMP_Text>(true);
+                    if (rowLabel != null) rowLabel.color = chosen ? Color.white : skin.textColor;
+                }
+                else
+                {
+                    pair.Value.targetGraphic.color = chosen ? selectedColor : normalColor;
+                }
+            }
 
-            counterText.text = $"{selected.Count} / {Required} picked";
+            RefreshTray(skin);
+            if (counterText != null) counterText.text = $"{selected.Count} / {Required} picked";
             startButton.interactable = Required > 0 && selected.Count == Required;
+        }
+
+        private void RefreshTray(UiSkin skin)
+        {
+            if (traySlots == null) return;
+            for (int i = 0; i < traySlots.Length; i++)
+            {
+                var slot = traySlots[i];
+                if (slot == null) continue;
+                slot.gameObject.SetActive(i < Required);
+                bool filled = i < selected.Count;
+                var image = slot.targetGraphic as Image;
+                var label = slot.GetComponentInChildren<TMP_Text>(true);
+                slot.onClick.RemoveAllListeners();
+                slot.interactable = filled;
+                if (filled)
+                {
+                    string word = selected[i];
+                    slot.onClick.AddListener(() => Toggle(word));
+                    if (image != null) { if (skin.rowChosen != null) image.sprite = skin.rowChosen; image.color = skin.RowChosenColor; }
+                    if (label != null) { label.text = SignLibrary.Display(word); label.color = Color.white; }
+                }
+                else
+                {
+                    if (image != null) { if (skin.row != null) image.sprite = skin.row; image.color = new Color(1f, 1f, 1f, 0.35f); }
+                    if (label != null) { label.text = "empty"; label.color = new Color(skin.textColor.r, skin.textColor.g, skin.textColor.b, 0.45f); }
+                }
+            }
         }
 
         private void StartSolo()
         {
             GameSession.Mode = SessionMode.Solo;
             GameSession.IsCreatingRoom = false;
+            GameSession.IsPublic = false;
             GameSession.RoomCode = "";
             GameSession.SelectedSigns = selected.ToArray();
             GameSession.SaveLastPicks(selected);
@@ -181,12 +301,24 @@ namespace SignRacers.UI
 
         // ---------------- Multiplayer ----------------
 
+        /// <summary>Join any open public room, or start one if none is open. No room code.</summary>
+        private void QuickPlay()
+        {
+            GameSession.Mode = SessionMode.Multiplayer;
+            GameSession.IsCreatingRoom = false;
+            GameSession.IsPublic = true;
+            GameSession.RoomCode = "";
+            GameSession.SelectedSigns = null; // the words come from the room's vote
+            LaunchRace();
+        }
+
         private void CreateRoom()
         {
             GameSession.Mode = SessionMode.Multiplayer;
             GameSession.IsCreatingRoom = true;
+            GameSession.IsPublic = false;
             GameSession.RoomCode = GameSession.GenerateRoomCode();
-            GameSession.SelectedSigns = null; // multiplayer words come from voting, which isn't built yet
+            GameSession.SelectedSigns = null; // multiplayer words come from voting
             LaunchRace();
         }
 
@@ -197,6 +329,23 @@ namespace SignRacers.UI
 
             GameSession.Mode = SessionMode.Multiplayer;
             GameSession.IsCreatingRoom = false;
+            GameSession.IsPublic = false;
+            GameSession.RoomCode = code;
+            GameSession.SelectedSigns = null;
+            LaunchRace();
+        }
+
+        /// <summary>A row in the Browse list was tapped: leave the room list, then join that room by its code.</summary>
+        private async void OnBrowseJoin(string roomName)
+        {
+            string code = GameSession.CleanCode(roomName);
+            if (code.Length != GameSession.RoomCodeLength) return;
+
+            if (browser != null) await browser.StopAsync();
+
+            GameSession.Mode = SessionMode.Multiplayer;
+            GameSession.IsCreatingRoom = false;
+            GameSession.IsPublic = false;
             GameSession.RoomCode = code;
             GameSession.SelectedSigns = null;
             LaunchRace();
