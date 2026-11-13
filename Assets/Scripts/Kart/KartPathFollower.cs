@@ -11,6 +11,7 @@ namespace SignRacers.Kart
     /// <summary>
     /// The networked kart. Its entire shared state is:
     ///   Distance                           - how far along the track it is
+    ///   LaneOffset                         - how far across the road it is (set by steering)
     ///   Boost / SuperBoost / Penalty / Slowed timers
     ///   Slots + ItemCount                  - a 2-slot item inventory (slot 0 = oldest)
     /// Position/rotation are derived from those every frame in Render(), so there is no
@@ -18,6 +19,8 @@ namespace SignRacers.Kart
     /// Only the state authority (the owner in Shared mode, the local player in Single mode)
     /// listens to the SignEventSource and writes this state. To affect ANOTHER kart, we
     /// send an RPC asking that kart's owner to apply the effect to itself.
+    /// Steering: while the owner holds a finger on the screen (see SteeringInput), the kart
+    /// slides across the road. Only the owner reads the screen, and only the owner writes LaneOffset.
     /// </summary>
     [RequireComponent(typeof(NetworkObject))]
     public class KartPathFollower : NetworkBehaviour
@@ -39,6 +42,18 @@ namespace SignRacers.Kart
         [SerializeField] private float superBoostDuration = 2.5f;
         [SerializeField] private float penaltyDuration = 1.5f;
         [SerializeField] private float slowedDuration = 3f;
+
+        [Header("Steering")]
+        [Tooltip("How fast the kart crosses the road at full steer, in world units per second.")]
+        [SerializeField] private float steerSpeed = 6f;
+        [Tooltip("How far from the centre line the kart may go. The road is 16 wide, so 7 leaves a little room at each edge.")]
+        [SerializeField] private float maxLaneOffset = 7f;
+
+        [Header("Visuals")]
+        [Tooltip("How far the kart leans into a steer, in degrees.")]
+        [SerializeField] private float maxLeanDegrees = 15f;
+        [Tooltip("How quickly the lean follows the steer. Higher is snappier.")]
+        [SerializeField] private float leanSmoothing = 8f;
 
         [Header("Layout")]
         [SerializeField] private float heightOffset = 0.5f;
@@ -79,6 +94,16 @@ namespace SignRacers.Kart
         private float lastSeenDistance;
         private float lastSeenTime;
         private SignEventSource source;
+
+        // The player's steering this frame, read on the owner only (0 for everyone else and for bots).
+        private float steerInput;
+
+        // Lane bookkeeping and lean: the lane the kart was placed in (so a new race can put it back),
+        // the lane as drawn (smoothed between network ticks), and the lean angle in degrees.
+        private float spawnLane;
+        private float visualLane;
+        private bool laneVisualInitialized;
+        private float leanDegrees;
 
         public bool IsBot => isBot;
 
@@ -138,7 +163,11 @@ namespace SignRacers.Kart
         }
 
         /// <summary>Set before spawning (see GameBootstrap) so karts drive side by side instead of overlapping.</summary>
-        public void SetLaneOffset(float offset) => LaneOffset = offset;
+        public void SetLaneOffset(float offset)
+        {
+            spawnLane = offset;
+            LaneOffset = offset;
+        }
         public bool IsBoosted => Live && IsActive(BoostTimer);
         public bool IsSuperBoosted => Live && IsActive(SuperBoostTimer);
         public bool IsPenalized => Live && IsActive(PenaltyTimer);
@@ -181,6 +210,14 @@ namespace SignRacers.Kart
             source.OnPenaltyTriggered -= HandlePenalty;
             source.OnItemUseTriggered -= HandleItemUse;
             source = null;
+        }
+
+        // ---- Steering input (owner only, read every frame) ----
+
+        private void Update()
+        {
+            // Only the player's own kart steers. Bots and other players' karts stay where they are.
+            steerInput = Live && HasStateAuthority && !isBot ? SteeringInput.Read() : 0f;
         }
 
         // ---- Sign events (state authority only) ----
@@ -274,6 +311,7 @@ namespace SignRacers.Kart
             PenaltyTimer = default;
             SlowedTimer = default;
             ItemCount = 0;
+            LaneOffset = spawnLane; // back to the lane it started in, not wherever the player steered to
             for (int i = 0; i < MaxItems; i++) Slots.Set(i, 0);
         }
 
@@ -285,6 +323,10 @@ namespace SignRacers.Kart
             localSpeed = 0f;
             if (Finished) return;                    // parked on the finish line
             if (!RaceManager.AllowsDriving) return;  // locked during waiting / countdown
+
+            // Steering: slide across the road while the player holds a finger on the screen.
+            if (steerInput != 0f)
+                LaneOffset = Mathf.Clamp(LaneOffset + steerInput * steerSpeed * Runner.DeltaTime, -maxLaneOffset, maxLaneOffset);
 
             float speed = baseSpeed * SpeedScale;
             if (!BoostTimer.ExpiredOrNotRunning(Runner)) speed *= boostMultiplier;
@@ -371,7 +413,8 @@ namespace SignRacers.Kart
             Vector3 pos = track.GetPosition(visualDistance, out Vector3 forward);
             TrackForward = forward;
             Vector3 right = Vector3.Cross(Vector3.up, forward);
-            transform.position = pos + right * LaneOffset + Vector3.up * heightOffset;
+            float lateralSpeed = UpdateVisualLane();
+            transform.position = pos + right * visualLane + Vector3.up * heightOffset;
 
             Quaternion rot = Quaternion.LookRotation(forward, Vector3.up);
 
@@ -383,7 +426,46 @@ namespace SignRacers.Kart
                 rot *= Quaternion.Euler(0f, 360f * progress, 0f);
             }
 
+            // Lean into the steer: tilt the kart toward the way it is sliding across the road.
+            // Negative because a positive roll tips the top of the kart to the left.
+            rot *= Quaternion.Euler(0f, 0f, -UpdateLean(lateralSpeed));
+
             transform.rotation = rot;
+        }
+
+        /// <summary>
+        /// Eases the drawn lane toward the networked LaneOffset every frame, so a steer moves smoothly
+        /// instead of stepping on each network tick. Returns how fast the drawn lane is sliding, in units per second.
+        /// Big jumps (for example a race restart) snap straight to the new lane.
+        /// </summary>
+        private float UpdateVisualLane()
+        {
+            float dt = Time.deltaTime;
+            if (!laneVisualInitialized || Mathf.Abs(LaneOffset - visualLane) > 5f)
+            {
+                visualLane = LaneOffset;
+                laneVisualInitialized = true;
+                return 0f;
+            }
+
+            float previous = visualLane;
+            visualLane = Mathf.Lerp(visualLane, LaneOffset, 1f - Mathf.Exp(-15f * dt));
+            return dt > 0f ? (visualLane - previous) / dt : 0f;
+        }
+
+        /// <summary>
+        /// How far to lean this frame, in degrees (positive = leaning right). It is worked out from how fast
+        /// the drawn lane is sliding, so it works for every kart, including other players', and it stays smooth
+        /// because the lane it reads from is already smoothed.
+        /// </summary>
+        private float UpdateLean(float lateralSpeed)
+        {
+            float dt = Time.deltaTime;
+
+            // Full lean at full steer speed.
+            float steer = Mathf.Clamp(lateralSpeed / steerSpeed, -1f, 1f);
+            leanDegrees = Mathf.Lerp(leanDegrees, steer * maxLeanDegrees, 1f - Mathf.Exp(-leanSmoothing * dt));
+            return leanDegrees;
         }
     }
 }
