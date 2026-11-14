@@ -13297,14 +13297,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1927778188}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c369a5a0ed9e42e3afa095f7fd64a7a, type: 3}
+  m_Script: {fileID: 11500000, guid: cd75cdc77f0f14282b934bbf3bc58324, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bop
-  style: 0
-  beatsPerMinute: 120
-  pulseAmount: 0.1
-  snap: 6
-  floatHeight: 8
+  height: 8
+  speed: 2
 --- !u!1 &1936229063
 GameObject:
   m_ObjectHideFlags: 0
